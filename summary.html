@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MindScan Lite - Summary</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="header">
+    <h1>MindScan Lite – Summary</h1>
+    <p class="subtitle">
+      Overview of your previous scans stored on this device.
+      <br />
+      <a href="index.html" class="link">Back to main scanner</a>
+    </p>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>Overall stats</h2>
+      <p id="summaryNone" class="hint" hidden>No scans found yet. Go back and run MindScan at least once.</p>
+      <div id="summaryStats">
+        <p>Total scans: <strong id="totalScans">0</strong></p>
+        <p>Average score: <strong id="avgScore">0.0</strong></p>
+        <p>Last scan date: <strong id="lastDate">-</strong></p>
+        <p>Last score: <strong id="lastScore">-</strong> (<span id="lastLabel">-</span>)</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Category breakdown</h2>
+      <p class="hint">How many of your scans were in each colour zone.</p>
+      <ul class="history-list" id="categoryList"></ul>
+    </section>
+
+    <section class="card">
+      <h2>All past scans</h2>
+      <p class="hint">Newest first (local device only).</p>
+      <ul class="history-list" id="allScansList"></ul>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <small>MindScan Lite - Local summary view</small>
+  </footer>
+
+  <script src="summary.js"></script>
+</body>
+</html>
