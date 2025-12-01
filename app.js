@@ -13,6 +13,14 @@ const suggestionList = document.getElementById("suggestionList");
 const historyList = document.getElementById("historyList");
 const clearHistoryBtn = document.getElementById("clearHistory");
 
+// NEW: breathing + extra tips elements
+const breathingCircle = document.getElementById("breathingCircle");
+const breathingInstruction = document.getElementById("breathingInstruction");
+const breathingToggle = document.getElementById("breathingToggle");
+
+const extraTipsBtn = document.getElementById("extraTipsBtn");
+const extraTipsList = document.getElementById("extraTipsList");
+
 const STORAGE_KEY = "mindscan_history_v1";
 
 function loadHistory() {
@@ -28,7 +36,8 @@ function saveHistory(history) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
 }
 
-// NEW: interpretScore with per-score suggestions
+// --------- Score interpretation (per-score suggestions) ----------
+
 function interpretScore(score) {
   // Round score to nearest integer, avoid negative
   const s = Math.max(0, Math.round(score));
@@ -137,6 +146,8 @@ function interpretScore(score) {
   return { status, label, message, suggestions };
 }
 
+// --------- Scoring ----------
+
 function computeScore(values) {
   const sleep = Number(values.sleep);
   const energy = Number(values.energy);
@@ -163,6 +174,8 @@ function computeScore(values) {
   // Keep minimum zero
   return Math.max(0, raw);
 }
+
+// --------- Render result + history ----------
 
 function renderResult(score, interpretation) {
   resultCard.hidden = false;
@@ -217,7 +230,45 @@ function renderHistory() {
     });
 }
 
-form.addEventListener("submit", (e) => {
+// --------- Extra wellness tips (random) ----------
+
+const extraTipsPool = [
+  "Take 5 deep breaths before you check your phone in the morning.",
+  "Keep a water bottle on your table and sip every 20 minutes.",
+  "Stand up and stretch for 30 seconds after each long task.",
+  "Try to keep one hour before sleep free from social media scrolling.",
+  "Write down three things you are grateful for today.",
+  "Eat at least one serving of fruit or vegetables with your main meal.",
+  "Schedule a ‘no-study’ block this week just for rest or hobbies.",
+  "Do a short walk outdoors or near a window to get some daylight.",
+  "Lower your screen brightness at night and turn on night mode.",
+  "Choose one person to send a kind message to today."
+];
+
+function pickRandomTips(n) {
+  const copy = [...extraTipsPool];
+  const chosen = [];
+  while (copy.length && chosen.length < n) {
+    const idx = Math.floor(Math.random() * copy.length);
+    chosen.push(copy[idx]);
+    copy.splice(idx, 1);
+  }
+  return chosen;
+}
+
+function renderExtraTips() {
+  if (!extraTipsList) return;
+  extraTipsList.innerHTML = "";
+  pickRandomTips(3).forEach((tip) => {
+    const li = document.createElement("li");
+    li.textContent = tip;
+    extraTipsList.appendChild(li);
+  });
+}
+
+// --------- Event listeners ----------
+
+form?.addEventListener("submit", (e) => {
   e.preventDefault();
 
   const formData = new FormData(form);
@@ -248,20 +299,47 @@ form.addEventListener("submit", (e) => {
   renderHistory();
 });
 
-clearBtn.addEventListener("click", () => {
+clearBtn?.addEventListener("click", () => {
   form.reset();
   resultCard.hidden = true;
 });
 
-clearHistoryBtn.addEventListener("click", () => {
+clearHistoryBtn?.addEventListener("click", () => {
   if (confirm("Clear all saved scan history from this browser?")) {
     localStorage.removeItem(STORAGE_KEY);
     renderHistory();
   }
 });
 
+// Breathing toggle
+if (breathingToggle && breathingCircle && breathingInstruction) {
+  let breathingOn = false;
+  breathingToggle.addEventListener("click", () => {
+    breathingOn = !breathingOn;
+    if (breathingOn) {
+      breathingCircle.classList.add("breathing-active");
+      breathingToggle.textContent = "Stop breathing exercise";
+      breathingInstruction.textContent =
+        "Inhale as the circle grows, hold briefly at the top, and exhale as it shrinks. Repeat for 6–10 cycles.";
+    } else {
+      breathingCircle.classList.remove("breathing-active");
+      breathingToggle.textContent = "Start breathing";
+      breathingInstruction.textContent =
+        "Tap \"Start breathing\" to begin a 4–4–4 breathing cycle.";
+    }
+  });
+}
+
+// Extra tips button
+if (extraTipsBtn) {
+  extraTipsBtn.addEventListener("click", renderExtraTips);
+  // show once on load
+  renderExtraTips();
+}
+
 // Initial load
 renderHistory();
 
-
+   
+   
  
