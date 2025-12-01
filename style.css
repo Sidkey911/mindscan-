@@ -87,6 +87,14 @@ select {
   background: #020617;
   color: #f9fafb;
 }
+.link {
+  color: #38bdf8;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.link:hover {
+  opacity: 0.9;
+}
 
 select:focus {
   outline: none;
