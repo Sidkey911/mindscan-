@@ -28,11 +28,12 @@ function saveHistory(history) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
 }
 
+// NEW: interpretScore with per-score suggestions
 function interpretScore(score) {
-  // Round score to nearest integer and clamp to 0+
+  // Round score to nearest integer, avoid negative
   const s = Math.max(0, Math.round(score));
 
-  // 1) Decide colour bucket & main message (same as before)
+  // 1) Decide colour + main message
   let status, label, message;
   if (s >= 9) {
     status = "green";
@@ -51,8 +52,7 @@ function interpretScore(score) {
       "Your answers suggest a high level of stress or low mood. It is important to rest and, if possible, talk to someone you trust.";
   }
 
-  // 2) Suggestions based on the EXACT score
-  //    (0–13 are possible in this scoring model)
+  // 2) Suggestions for EACH exact score (0–13)
   const suggestionMap = {
     0: [
       "Stop everything for a moment and check basic needs: have you eaten, drunk water, and slept enough?",
@@ -136,6 +136,7 @@ function interpretScore(score) {
 
   return { status, label, message, suggestions };
 }
+
 function computeScore(values) {
   const sleep = Number(values.sleep);
   const energy = Number(values.energy);
@@ -156,7 +157,8 @@ function computeScore(values) {
   if (screen === 2) screenPenalty = 1;
   if (screen === 3) screenPenalty = 2;
 
-  const raw = (sleepPts + energyPts + motivationPts + moodPts) - (stressPenalty + screenPenalty);
+  const raw =
+    sleepPts + energyPts + motivationPts + moodPts - (stressPenalty + screenPenalty);
 
   // Keep minimum zero
   return Math.max(0, raw);
@@ -181,7 +183,7 @@ function renderResult(score, interpretation) {
   resultMessage.textContent = interpretation.message;
 
   suggestionList.innerHTML = "";
-  interpretation.suggestions.forEach(s => {
+  interpretation.suggestions.forEach((s) => {
     const li = document.createElement("li");
     li.textContent = s;
     suggestionList.appendChild(li);
@@ -202,7 +204,7 @@ function renderHistory() {
   history
     .slice()
     .reverse()
-    .forEach(item => {
+    .forEach((item) => {
       const li = document.createElement("li");
       const left = document.createElement("span");
       const right = document.createElement("span");
@@ -260,3 +262,6 @@ clearHistoryBtn.addEventListener("click", () => {
 
 // Initial load
 renderHistory();
+
+
+ 
