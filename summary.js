@@ -1,4 +1,11 @@
-const STORAGE_KEY = "mindscan_history_v1";
+const PROFILE_KEY = "mindscan_profile_v1";
+function loadProfile() {
+  try {
+    return JSON.parse(localStorage.getItem(PROFILE_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
 
 function loadHistory() {
   try {
