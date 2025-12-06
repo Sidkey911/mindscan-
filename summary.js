@@ -93,3 +93,12 @@ if (!history.length) {
       allScansList.appendChild(li);
     });
 }
+const p = loadProfile();
+document.getElementById("summaryUser").innerHTML = `
+  <strong>Name:</strong> ${p.name || "-"} <br>
+  <strong>Age:</strong> ${p.age || "-"} <br>
+  <strong>Gender:</strong> ${p.gender || "-"} <br>
+  <strong>Course:</strong> ${p.course || "-"} <br>
+  <strong>Email:</strong> ${p.email || "-"}
+`;
+
