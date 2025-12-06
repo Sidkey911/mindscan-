@@ -353,24 +353,61 @@ clearHistoryBtn?.addEventListener("click", () => {
   }
 });
 
-// Breathing toggle
+// Breathing toggle with automated 4–4–4 cycle
 if (breathingToggle && breathingCircle && breathingInstruction) {
   let breathingOn = false;
+  let breathingTimer = null;
+
+  function resetBreathingText() {
+    breathingInstruction.textContent =
+      'Tap "Start breathing" to begin a 4–4–4 breathing cycle.';
+  }
+
+  function startBreathingLoop() {
+    let phase = 0; // 0 = inhale, 1 = hold, 2 = exhale
+
+    function nextPhase() {
+      if (!breathingOn) return;
+
+      if (phase === 0) {
+        breathingInstruction.textContent = "Inhale slowly for 4 seconds…";
+      } else if (phase === 1) {
+        breathingInstruction.textContent = "Hold your breath for 4 seconds…";
+      } else {
+        breathingInstruction.textContent = "Exhale gently for 4 seconds…";
+      }
+
+      phase = (phase + 1) % 3;
+      breathingTimer = setTimeout(nextPhase, 4000); // 4s per phase
+    }
+
+    nextPhase();
+  }
+
+  function stopBreathingLoop() {
+    clearTimeout(breathingTimer);
+    breathingTimer = null;
+    resetBreathingText();
+  }
+
   breathingToggle.addEventListener("click", () => {
     breathingOn = !breathingOn;
+
     if (breathingOn) {
       breathingCircle.classList.add("breathing-active");
       breathingToggle.textContent = "Stop breathing exercise";
-      breathingInstruction.textContent =
-        "Inhale as the circle grows, hold briefly at the top, and exhale as it shrinks. Repeat for 6–10 cycles.";
+      startBreathingLoop();
     } else {
       breathingCircle.classList.remove("breathing-active");
       breathingToggle.textContent = "Start breathing";
-      breathingInstruction.textContent =
-        "Tap \"Start breathing\" to begin a 4–4–4 breathing cycle.";
+      stopBreathingLoop();
     }
   });
+
+  // Set initial text
+  resetBreathingText();
 }
+
 
 // Extra tips button
 if (extraTipsBtn) {
