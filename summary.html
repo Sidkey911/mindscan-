@@ -48,6 +48,16 @@
 
     <section class="card">
       <h2>All past scans</h2>
+          <section class="card">
+      <h2>Personal wellness report</h2>
+      <p class="hint">
+        This report is generated automatically from your saved scans. You can print or save it as PDF.
+      </p>
+      <div id="reportContent" class="report-content"></div>
+      <button type="button" class="btn" id="generateReportBtn">Generate report</button>
+      <button type="button" class="btn btn-secondary" id="printReportBtn">Print / Save as PDF</button>
+    </section>
+
       <p class="hint">Newest first (local device only).</p>
       <ul class="history-list" id="allScansList"></ul>
     </section>
