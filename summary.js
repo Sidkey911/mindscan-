@@ -32,6 +32,17 @@ const categoryList = document.getElementById("categoryList");
 const allScansList = document.getElementById("allScansList");
 const summaryUser = document.getElementById("summaryUser");
 
+const reportContent = document.getElementById("reportContent");
+const generateReportBtn = document.getElementById("generateReportBtn");
+const printReportBtn = document.getElementById("printReportBtn");
+
+let summaryStatsData = {
+  total: 0,
+  avg: 0,
+  counts: { green: 0, yellow: 0, red: 0 },
+  last: null
+};
+
 // ---------- USER PROFILE ----------
 const p = loadProfile();
 if (summaryUser) {
@@ -53,6 +64,13 @@ if (summaryUser) {
 const history = loadHistory();
 
 if (!history.length) {
+    summaryStatsData = {
+    total,
+    avg,
+    counts,
+    last
+  };
+
      // Weekly chart (last 7 days, average per day)
   const chartCanvas = document.getElementById("weeklyChart");
   if (chartCanvas) {
@@ -166,4 +184,45 @@ if (!history.length) {
       });
   }
 }
+ 
+function buildReport() {
+  if (!reportContent) return;
 
+  const { total, avg, counts, last } = summaryStatsData;
+
+  if (!total) {
+    reportContent.innerHTML =
+      "<p>You need at least one scan before a report can be generated.</p>";
+    return;
+  }
+
+  const mainLevel =
+    counts.red > 0 && counts.red >= counts.green && counts.red >= counts.yellow
+      ? "high stress risk"
+      : counts.yellow >= counts.green
+      ? "mild or moderate stress"
+      : "generally stable wellness";
+
+  reportContent.innerHTML = `
+    <p><strong>Overview:</strong> You have completed <strong>${total}</strong> MindScan sessions with an average score of <strong>${avg.toFixed(
+      1
+    )}</strong>.</p>
+    <p><strong>Latest scan:</strong> On <strong>${last.date ||
+      "-"}</strong> your score was <strong>${Number(
+    last.score
+  ).toFixed(1)}</strong> (${last.label || "-"}).</p>
+    <p><strong>General pattern:</strong> Your results suggest <strong>${mainLevel}</strong> over the recorded period.</p>
+    <p><strong>Colour breakdown:</strong></p>
+    <ul>
+      <li>Green (doing okay): ${counts.green}</li>
+      <li>Yellow (mild stress warning): ${counts.yellow}</li>
+      <li>Red (high stress risk): ${counts.red}</li>
+    </ul>
+    <p><strong>Simple recommendations:</strong> Continue using MindScan regularly, pay attention to days that fall in the yellow/red zone, and combine the check-ins with healthy habits such as proper sleep, movement, hydration, and talking to someone you trust when you feel overwhelmed.</p>
+  `;
+}
+
+generateReportBtn?.addEventListener("click", buildReport);
+printReportBtn?.addEventListener("click", () => {
+  window.print();
+});
