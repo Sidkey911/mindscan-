@@ -259,3 +259,19 @@ select:focus {
     opacity: 0.8;
   }
 }
+#profileSection input,
+#profileSection select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  margin-top: 6px;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+#profileSection label {
+  display: block;
+  margin-bottom: 14px;
+  font-size: 14px;
+}
