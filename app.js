@@ -3,6 +3,12 @@
 // ---------- CONSTANTS ----------
 const HISTORY_KEY = "mindscan_history_v1";
 const PROFILE_KEY = "mindscan_profile_v1";
+const REMINDER_KEY = "mindscan_reminder_enabled";
+const enableReminderBtn = document.getElementById("enableReminder");
+const disableReminderBtn = document.getElementById("disableReminder");
+const reminderStatus = document.getElementById("reminderStatus");
+let reminderTimeout = null;
+
 
 // ---------- DOM ELEMENTS ----------
 const scoreBarInner = document.getElementById("scoreBarInner");
@@ -241,6 +247,63 @@ function renderResult(score, interpretation) {
     suggestionList.appendChild(li);
   });
 }
+// ---------- REMINDER (demo notification) ----------
+function updateReminderStatus() {
+  if (!reminderStatus) return;
+  const enabled = localStorage.getItem(REMINDER_KEY) === "true";
+  if (!("Notification" in window)) {
+    reminderStatus.textContent =
+      "Notifications are not supported in this browser.";
+    return;
+  }
+  reminderStatus.textContent = enabled
+    ? "Demo reminder enabled. You will see a notification shortly while this page is open."
+    : "Reminder is currently disabled.";
+}
+
+function scheduleDemoReminder() {
+  if (!("Notification" in window)) return;
+  const enabled = localStorage.getItem(REMINDER_KEY) === "true";
+  if (!enabled) return;
+
+  // Clear old timer
+  if (reminderTimeout) clearTimeout(reminderTimeout);
+
+  // Demo: notify after 10 seconds
+  reminderTimeout = setTimeout(() => {
+    if (Notification.permission === "granted") {
+      new Notification("MindScan Lite", {
+        body: "Time to check in with your wellness today.",
+      });
+    }
+  }, 10000);
+}
+
+enableReminderBtn?.addEventListener("click", () => {
+  if (!("Notification" in window)) {
+    alert("This browser does not support notifications.");
+    return;
+  }
+  Notification.requestPermission().then((perm) => {
+    if (perm === "granted") {
+      localStorage.setItem(REMINDER_KEY, "true");
+      updateReminderStatus();
+      scheduleDemoReminder();
+    } else {
+      alert("Notification permission was not granted.");
+    }
+  });
+});
+
+disableReminderBtn?.addEventListener("click", () => {
+  localStorage.setItem(REMINDER_KEY, "false");
+  if (reminderTimeout) clearTimeout(reminderTimeout);
+  updateReminderStatus();
+});
+
+// call once at load
+updateReminderStatus();
+scheduleDemoReminder();
 
 function renderHistory() {
   if (!historyList) return;
