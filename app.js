@@ -1,49 +1,45 @@
-// MindScan Lite - Main Page Logic
+// MindScan Lite - main logic (stable version)
 
 // ---------- CONSTANTS ----------
-const HISTORY_KEY = "mindscan_history_v1";
-const PROFILE_KEY = "mindscan_profile_v1";
-const REMINDER_KEY = "mindscan_reminder_enabled";
-const enableReminderBtn = document.getElementById("enableReminder");
-const disableReminderBtn = document.getElementById("disableReminder");
-const reminderStatus = document.getElementById("reminderStatus");
-let reminderTimeout = null;
-
+var HISTORY_KEY = "mindscan_history_v1";
+var PROFILE_KEY = "mindscan_profile_v1";
 
 // ---------- DOM ELEMENTS ----------
-const scoreBarInner = document.getElementById("scoreBarInner");
-const scoreBarLabel = document.getElementById("scoreBarLabel");
+var form = document.getElementById("scanForm");
+var clearBtn = document.getElementById("clearBtn");
 
-const form = document.getElementById("scanForm");
-const clearBtn = document.getElementById("clearBtn");
+var resultCard = document.getElementById("resultCard");
+var resultBadge = document.getElementById("resultBadge");
+var resultLabel = document.getElementById("resultLabel");
+var resultScore = document.getElementById("resultScore");
+var resultMessage = document.getElementById("resultMessage");
+var suggestionList = document.getElementById("suggestionList");
 
-const resultCard = document.getElementById("resultCard");
-const resultBadge = document.getElementById("resultBadge");
-const resultLabel = document.getElementById("resultLabel");
-const resultScore = document.getElementById("resultScore");
-const resultMessage = document.getElementById("resultMessage");
-const suggestionList = document.getElementById("suggestionList");
+var historyList = document.getElementById("historyList");
+var clearHistoryBtn = document.getElementById("clearHistory");
 
-const historyList = document.getElementById("historyList");
-const clearHistoryBtn = document.getElementById("clearHistory");
+var scoreBarInner = document.getElementById("scoreBarInner");
+var scoreBarLabel = document.getElementById("scoreBarLabel");
 
-// Profile elements
-const profileForm = document.getElementById("profileForm");
-const saveProfileBtn = document.getElementById("saveProfileBtn");
+// Profile
+var profileForm = document.getElementById("profileForm");
+var saveProfileBtn = document.getElementById("saveProfileBtn");
 
-// Breathing & tips
-const breathingCircle = document.getElementById("breathingCircle");
-const breathingInstruction = document.getElementById("breathingInstruction");
-const breathingToggle = document.getElementById("breathingToggle");
-const extraTipsBtn = document.getElementById("extraTipsBtn");
-const extraTipsList = document.getElementById("extraTipsList");
+// Breathing
+var breathingCircle = document.getElementById("breathingCircle");
+var breathingInstruction = document.getElementById("breathingInstruction");
+var breathingToggle = document.getElementById("breathingToggle");
+
+// Extra tips
+var extraTipsBtn = document.getElementById("extraTipsBtn");
+var extraTipsList = document.getElementById("extraTipsList");
 
 // ---------- STORAGE HELPERS ----------
 function loadHistory() {
   try {
-    const data = JSON.parse(localStorage.getItem(HISTORY_KEY));
+    var data = JSON.parse(localStorage.getItem(HISTORY_KEY));
     return Array.isArray(data) ? data : [];
-  } catch {
+  } catch (e) {
     return [];
   }
 }
@@ -54,9 +50,9 @@ function saveHistory(history) {
 
 function loadProfile() {
   try {
-    const data = JSON.parse(localStorage.getItem(PROFILE_KEY));
+    var data = JSON.parse(localStorage.getItem(PROFILE_KEY));
     return data || {};
-  } catch {
+  } catch (e) {
     return {};
   }
 }
@@ -65,10 +61,10 @@ function saveProfile(data) {
   localStorage.setItem(PROFILE_KEY, JSON.stringify(data));
 }
 
-// ---------- PROFILE HANDLING ----------
+// ---------- PROFILE ----------
 function fillProfileForm() {
   if (!profileForm) return;
-  const p = loadProfile();
+  var p = loadProfile();
   profileForm.name.value = p.name || "";
   profileForm.age.value = p.age || "";
   profileForm.gender.value = p.gender || "";
@@ -77,11 +73,37 @@ function fillProfileForm() {
   profileForm.email.value = p.email || "";
 }
 
-// ---------- SCORE INTERPRETATION ----------
-function interpretScore(score) {
-  const s = Math.max(0, Math.round(score));
+// ---------- SCORING ----------
+function computeScore(values) {
+  var sleep = Number(values.sleep);
+  var energy = Number(values.energy);
+  var motivation = Number(values.motivation);
+  var stress = Number(values.stress);
+  var screen = Number(values.screen);
+  var mood = Number(values.mood);
 
-  let status, label, message;
+  var sleepPts = sleep;
+  var energyPts = energy;
+  var motivationPts = motivation;
+  var moodPts = mood;
+
+  var stressPenalty = stress;
+  var screenPenalty = 0;
+  if (screen === 2) screenPenalty = 1;
+  if (screen === 3) screenPenalty = 2;
+
+  var raw =
+    sleepPts + energyPts + motivationPts + moodPts - (stressPenalty + screenPenalty);
+
+  if (raw < 0) raw = 0;
+  return raw;
+}
+
+// ---------- INTERPRETATION ----------
+function interpretScore(score) {
+  var s = Math.max(0, Math.round(score));
+
+  var status, label, message;
   if (s >= 9) {
     status = "green";
     label = "Green - doing okay";
@@ -98,21 +120,8 @@ function interpretScore(score) {
     message =
       "Your answers suggest a high level of stress or low mood. It is important to rest and, if possible, talk to someone you trust.";
   }
-  if (scoreBarInner && scoreBarLabel) {
-    const maxScore = 13;
-    const pct = Math.max(0, Math.min(100, (score / maxScore) * 100));
-    scoreBarInner.style.width = pct + "%";
 
-    let desc;
-    if (interpretation.status === "green") desc = "Wellness level: good";
-    else if (interpretation.status === "yellow") desc = "Wellness level: moderate";
-    else desc = "Wellness level: low";
-
-    scoreBarLabel.textContent =
-      desc + " (" + score.toFixed(1) + " / " + maxScore + ")";
-  }
-
-  const suggestionMap = {
+  var suggestionMap = {
     0: [
       "Stop everything for a moment and check basic needs: have you eaten, drunk water, and slept enough?",
       "Find a quiet place and do 3–5 minutes of slow breathing before continuing tasks.",
@@ -185,49 +194,25 @@ function interpretScore(score) {
     ]
   };
 
-  const suggestions =
-    suggestionMap[s] ||
-    [
+  var suggestions = suggestionMap[s];
+  if (!suggestions) {
+    suggestions = [
       "Take a short break and move your body for a few minutes.",
       "Drink some water and check if you need food or rest.",
       "Plan one small positive action for yourself before the day ends."
     ];
+  }
 
-  return { status, label, message, suggestions };
+  return { status: status, label: label, message: message, suggestions: suggestions };
 }
 
-// ---------- SCORING ----------
-function computeScore(values) {
-  const sleep = Number(values.sleep);
-  const energy = Number(values.energy);
-  const motivation = Number(values.motivation);
-  const stress = Number(values.stress);
-  const screen = Number(values.screen);
-  const mood = Number(values.mood);
-
-  const sleepPts = sleep;
-  const energyPts = energy;
-  const motivationPts = motivation;
-  const moodPts = mood;
-
-  const stressPenalty = stress;
-  let screenPenalty = 0;
-  if (screen === 2) screenPenalty = 1;
-  if (screen === 3) screenPenalty = 2;
-
-  const raw =
-    sleepPts + energyPts + motivationPts + moodPts - (stressPenalty + screenPenalty);
-
-  return Math.max(0, raw);
-}
-
-// ---------- RENDERING ----------
+// ---------- RENDER RESULT ----------
 function renderResult(score, interpretation) {
   if (!resultCard) return;
+
   resultCard.hidden = false;
 
   resultBadge.classList.remove("status-green", "status-yellow", "status-red");
-
   if (interpretation.status === "green") {
     resultBadge.classList.add("status-green");
   } else if (interpretation.status === "yellow") {
@@ -240,101 +225,62 @@ function renderResult(score, interpretation) {
   resultScore.textContent = "Score: " + score.toFixed(1);
   resultMessage.textContent = interpretation.message;
 
+  // suggestions
   suggestionList.innerHTML = "";
-  interpretation.suggestions.forEach((s) => {
-    const li = document.createElement("li");
-    li.textContent = s;
+  for (var i = 0; i < interpretation.suggestions.length; i++) {
+    var li = document.createElement("li");
+    li.textContent = interpretation.suggestions[i];
     suggestionList.appendChild(li);
-  });
-}
-// ---------- REMINDER (demo notification) ----------
-function updateReminderStatus() {
-  if (!reminderStatus) return;
-  const enabled = localStorage.getItem(REMINDER_KEY) === "true";
-  if (!("Notification" in window)) {
-    reminderStatus.textContent =
-      "Notifications are not supported in this browser.";
-    return;
   }
-  reminderStatus.textContent = enabled
-    ? "Demo reminder enabled. You will see a notification shortly while this page is open."
-    : "Reminder is currently disabled.";
-}
 
-function scheduleDemoReminder() {
-  if (!("Notification" in window)) return;
-  const enabled = localStorage.getItem(REMINDER_KEY) === "true";
-  if (!enabled) return;
+  // wellness bar
+  if (scoreBarInner && scoreBarLabel) {
+    var maxScore = 13;
+    var pct = (score / maxScore) * 100;
+    if (pct < 0) pct = 0;
+    if (pct > 100) pct = 100;
+    scoreBarInner.style.width = pct + "%";
 
-  // Clear old timer
-  if (reminderTimeout) clearTimeout(reminderTimeout);
+    var desc;
+    if (interpretation.status === "green") desc = "Wellness level: good";
+    else if (interpretation.status === "yellow") desc = "Wellness level: moderate";
+    else desc = "Wellness level: low";
 
-  // Demo: notify after 10 seconds
-  reminderTimeout = setTimeout(() => {
-    if (Notification.permission === "granted") {
-      new Notification("MindScan Lite", {
-        body: "Time to check in with your wellness today.",
-      });
-    }
-  }, 10000);
-}
-
-enableReminderBtn?.addEventListener("click", () => {
-  if (!("Notification" in window)) {
-    alert("This browser does not support notifications.");
-    return;
+    scoreBarLabel.textContent =
+      desc + " (" + score.toFixed(1) + " / " + maxScore + ")";
   }
-  Notification.requestPermission().then((perm) => {
-    if (perm === "granted") {
-      localStorage.setItem(REMINDER_KEY, "true");
-      updateReminderStatus();
-      scheduleDemoReminder();
-    } else {
-      alert("Notification permission was not granted.");
-    }
-  });
-});
+}
 
-disableReminderBtn?.addEventListener("click", () => {
-  localStorage.setItem(REMINDER_KEY, "false");
-  if (reminderTimeout) clearTimeout(reminderTimeout);
-  updateReminderStatus();
-});
-
-// call once at load
-updateReminderStatus();
-scheduleDemoReminder();
-
+// ---------- HISTORY ----------
 function renderHistory() {
   if (!historyList) return;
-  const history = loadHistory();
+  var history = loadHistory();
 
   historyList.innerHTML = "";
   if (!history.length) {
-    const li = document.createElement("li");
-    li.textContent = "No previous scans yet.";
-    historyList.appendChild(li);
+    var liEmpty = document.createElement("li");
+    liEmpty.textContent = "No previous scans yet.";
+    historyList.appendChild(liEmpty);
     return;
   }
 
-  history
-    .slice()
-    .reverse()
-    .forEach((item) => {
-      const li = document.createElement("li");
-      const left = document.createElement("span");
-      const right = document.createElement("span");
-      left.textContent = `${item.date} - ${item.label}`;
-      right.textContent = "Score " + Number(item.score).toFixed(1);
-      right.className = "history-score";
-      li.appendChild(left);
-      li.appendChild(right);
-      historyList.appendChild(li);
-    });
+  var copy = history.slice().reverse();
+  for (var i = 0; i < copy.length; i++) {
+    var item = copy[i];
+    var li = document.createElement("li");
+    var left = document.createElement("span");
+    var right = document.createElement("span");
+    left.textContent = item.date + " - " + item.label;
+    right.textContent = "Score " + Number(item.score).toFixed(1);
+    right.className = "history-score";
+    li.appendChild(left);
+    li.appendChild(right);
+    historyList.appendChild(li);
+  }
 }
 
 // ---------- EXTRA TIPS ----------
-const extraTipsPool = [
+var extraTipsPool = [
   "Take 5 deep breaths before you check your phone in the morning.",
   "Keep a water bottle on your table and sip every 20 minutes.",
   "Stand up and stretch for 30 seconds after each long task.",
@@ -348,10 +294,10 @@ const extraTipsPool = [
 ];
 
 function pickRandomTips(n) {
-  const copy = [...extraTipsPool];
-  const chosen = [];
+  var copy = extraTipsPool.slice();
+  var chosen = [];
   while (copy.length && chosen.length < n) {
-    const idx = Math.floor(Math.random() * copy.length);
+    var idx = Math.floor(Math.random() * copy.length);
     chosen.push(copy[idx]);
     copy.splice(idx, 1);
   }
@@ -361,113 +307,57 @@ function pickRandomTips(n) {
 function renderExtraTips() {
   if (!extraTipsList) return;
   extraTipsList.innerHTML = "";
-  pickRandomTips(3).forEach((tip) => {
-    const li = document.createElement("li");
-    li.textContent = tip;
+  var tips = pickRandomTips(3);
+  for (var i = 0; i < tips.length; i++) {
+    var li = document.createElement("li");
+    li.textContent = tips[i];
     extraTipsList.appendChild(li);
-  });
+  }
 }
 
-// ---------- EVENT LISTENERS ----------
+// ---------- BREATHING (4-4-4) ----------
+var breathingOn = false;
+var breathingTimer = null;
 
-// Main form
-form?.addEventListener("submit", (e) => {
-  e.preventDefault();
-
-  const formData = new FormData(form);
-  const values = {
-    sleep: formData.get("sleep"),
-    energy: formData.get("energy"),
-    motivation: formData.get("motivation"),
-    stress: formData.get("stress"),
-    screen: formData.get("screen"),
-    mood: formData.get("mood")
-  };
-
-  const score = computeScore(values);
-  const interpretation = interpretScore(score);
-  renderResult(score, interpretation);
-
-  const today = new Date();
-  const dateStr = today.toISOString().slice(0, 10);
-
-  const history = loadHistory();
-  history.push({
-    date: dateStr,
-    score,
-    label: interpretation.label
-  });
-  saveHistory(history);
-  renderHistory();
-});
-
-clearBtn?.addEventListener("click", () => {
-  form.reset();
-  if (resultCard) resultCard.hidden = true;
-});
-
-clearHistoryBtn?.addEventListener("click", () => {
-  if (confirm("Clear all saved scan history from this browser?")) {
-    localStorage.removeItem(HISTORY_KEY);
-    renderHistory();
-  }
-});
-
-// Profile save
-saveProfileBtn?.addEventListener("click", () => {
-  if (!profileForm) return;
-  const data = {
-    name: profileForm.name.value.trim(),
-    age: profileForm.age.value.trim(),
-    gender: profileForm.gender.value,
-    studentId: profileForm.studentId.value.trim(),
-    course: profileForm.course.value.trim(),
-    email: profileForm.email.value.trim()
-  };
-  saveProfile(data);
-  alert("Profile saved successfully!");
-});
-
-// Breathing toggle with automated 4-4-4 cycle
-if (breathingToggle && breathingCircle && breathingInstruction) {
-  let breathingOn = false;
-  let breathingTimer = null;
-
-  function resetBreathingText() {
+function resetBreathingText() {
+  if (breathingInstruction) {
     breathingInstruction.textContent =
       'Tap "Start breathing" to begin a 4–4–4 breathing cycle.';
   }
+}
 
-  function startBreathingLoop() {
-    let phase = 0; // 0 = inhale, 1 = hold, 2 = exhale
+function startBreathingLoop() {
+  if (!breathingInstruction) return;
+  var phase = 0; // 0 inhale, 1 hold, 2 exhale
 
-    function nextPhase() {
-      if (!breathingOn) return;
+  function nextPhase() {
+    if (!breathingOn) return;
 
-      if (phase === 0) {
-        breathingInstruction.textContent = "Inhale slowly for 4 seconds…";
-      } else if (phase === 1) {
-        breathingInstruction.textContent = "Hold your breath for 4 seconds…";
-      } else {
-        breathingInstruction.textContent = "Exhale gently for 4 seconds…";
-      }
-
-      phase = (phase + 1) % 3;
-      breathingTimer = setTimeout(nextPhase, 4000);
+    if (phase === 0) {
+      breathingInstruction.textContent = "Inhale slowly for 4 seconds…";
+    } else if (phase === 1) {
+      breathingInstruction.textContent = "Hold your breath for 4 seconds…";
+    } else {
+      breathingInstruction.textContent = "Exhale gently for 4 seconds…";
     }
 
-    nextPhase();
+    phase = (phase + 1) % 3;
+    breathingTimer = setTimeout(nextPhase, 4000);
   }
 
-  function stopBreathingLoop() {
-    clearTimeout(breathingTimer);
-    breathingTimer = null;
-    resetBreathingText();
-  }
+  nextPhase();
+}
 
-  breathingToggle.addEventListener("click", () => {
+function stopBreathingLoop() {
+  if (breathingTimer) clearTimeout(breathingTimer);
+  breathingTimer = null;
+  resetBreathingText();
+}
+
+if (breathingToggle && breathingCircle) {
+  resetBreathingText();
+  breathingToggle.addEventListener("click", function () {
     breathingOn = !breathingOn;
-
     if (breathingOn) {
       breathingCircle.classList.add("breathing-active");
       breathingToggle.textContent = "Stop breathing exercise";
@@ -478,11 +368,79 @@ if (breathingToggle && breathingCircle && breathingInstruction) {
       stopBreathingLoop();
     }
   });
-
-  resetBreathingText();
 }
 
-// Extra tips
+// ---------- EVENT LISTENERS ----------
+
+// Main form submit
+if (form) {
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    var formData = new FormData(form);
+    var values = {
+      sleep: formData.get("sleep"),
+      energy: formData.get("energy"),
+      motivation: formData.get("motivation"),
+      stress: formData.get("stress"),
+      screen: formData.get("screen"),
+      mood: formData.get("mood")
+    };
+
+    var score = computeScore(values);
+    var interpretation = interpretScore(score);
+    renderResult(score, interpretation);
+
+    var today = new Date();
+    var dateStr = today.toISOString().slice(0, 10);
+
+    var history = loadHistory();
+    history.push({
+      date: dateStr,
+      score: score,
+      label: interpretation.label
+    });
+    saveHistory(history);
+    renderHistory();
+  });
+}
+
+// Clear form
+if (clearBtn) {
+  clearBtn.addEventListener("click", function () {
+    if (form) form.reset();
+    if (resultCard) resultCard.hidden = true;
+  });
+}
+
+// Clear history
+if (clearHistoryBtn) {
+  clearHistoryBtn.addEventListener("click", function () {
+    if (confirm("Clear all saved scan history from this browser?")) {
+      localStorage.removeItem(HISTORY_KEY);
+      renderHistory();
+    }
+  });
+}
+
+// Save profile
+if (saveProfileBtn) {
+  saveProfileBtn.addEventListener("click", function () {
+    if (!profileForm) return;
+    var data = {
+      name: profileForm.name.value.trim(),
+      age: profileForm.age.value.trim(),
+      gender: profileForm.gender.value,
+      studentId: profileForm.studentId.value.trim(),
+      course: profileForm.course.value.trim(),
+      email: profileForm.email.value.trim()
+    };
+    saveProfile(data);
+    alert("Profile saved successfully!");
+  });
+}
+
+// Extra tips button
 if (extraTipsBtn) {
   extraTipsBtn.addEventListener("click", renderExtraTips);
 }
@@ -492,4 +450,4 @@ fillProfileForm();
 renderHistory();
 renderExtraTips();
 
-  
+   
