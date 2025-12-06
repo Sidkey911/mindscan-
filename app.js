@@ -5,6 +5,9 @@ const HISTORY_KEY = "mindscan_history_v1";
 const PROFILE_KEY = "mindscan_profile_v1";
 
 // ---------- DOM ELEMENTS ----------
+const scoreBarInner = document.getElementById("scoreBarInner");
+const scoreBarLabel = document.getElementById("scoreBarLabel");
+
 const form = document.getElementById("scanForm");
 const clearBtn = document.getElementById("clearBtn");
 
@@ -88,6 +91,19 @@ function interpretScore(score) {
     label = "Red - high stress risk";
     message =
       "Your answers suggest a high level of stress or low mood. It is important to rest and, if possible, talk to someone you trust.";
+  }
+  if (scoreBarInner && scoreBarLabel) {
+    const maxScore = 13;
+    const pct = Math.max(0, Math.min(100, (score / maxScore) * 100));
+    scoreBarInner.style.width = pct + "%";
+
+    let desc;
+    if (interpretation.status === "green") desc = "Wellness level: good";
+    else if (interpretation.status === "yellow") desc = "Wellness level: moderate";
+    else desc = "Wellness level: low";
+
+    scoreBarLabel.textContent =
+      desc + " (" + score.toFixed(1) + " / " + maxScore + ")";
   }
 
   const suggestionMap = {
