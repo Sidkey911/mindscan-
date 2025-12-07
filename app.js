@@ -7,6 +7,10 @@ var PROFILE_KEY = "mindscan_profile_v1";
 // ---------- DOM ELEMENTS ----------
 var form = document.getElementById("scanForm");
 var clearBtn = document.getElementById("clearBtn");
+var habitsForm = document.getElementById("habitsForm");
+var habitScoreText = document.getElementById("habitScoreText");
+
+var HABITS_KEY = "mindscan_habits_v1";
 
 var resultCard = document.getElementById("resultCard");
 var resultBadge = document.getElementById("resultBadge");
@@ -44,6 +48,60 @@ function loadHistory() {
   } catch (e) {
     return [];
   }
+}
+function todayKey() {
+  var d = new Date();
+  return d.toISOString().slice(0, 10);
+}
+
+function loadHabits() {
+  try {
+    var raw = localStorage.getItem(HABITS_KEY);
+    if (!raw) return {};
+    var data = JSON.parse(raw);
+    return data || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveHabits(all) {
+  localStorage.setItem(HABITS_KEY, JSON.stringify(all));
+}
+
+function updateHabitUI() {
+  if (!habitsForm || !habitScoreText) return;
+  var all = loadHabits();
+  var today = todayKey();
+  var todayData = all[today] || {};
+  var total = 5;
+  var done = 0;
+
+  ["sleep7", "water", "movement", "mindful", "lowScreen"].forEach(function (name) {
+    var input = habitsForm.elements[name];
+    if (input) {
+      input.checked = !!todayData[name];
+      if (input.checked) done++;
+    }
+  });
+
+  habitScoreText.textContent = "Today’s habit score: " + done + " / " + total;
+}
+
+if (habitsForm) {
+  habitsForm.addEventListener("change", function () {
+    var all = loadHabits();
+    var today = todayKey();
+    all[today] = {
+      sleep7: habitsForm.elements["sleep7"].checked,
+      water: habitsForm.elements["water"].checked,
+      movement: habitsForm.elements["movement"].checked,
+      mindful: habitsForm.elements["mindful"].checked,
+      lowScreen: habitsForm.elements["lowScreen"].checked
+    };
+    saveHabits(all);
+    updateHabitUI();
+  });
 }
 
 function saveHistory(history) {
@@ -471,5 +529,6 @@ if (extraTipsBtn) {
 fillProfileForm();
 renderHistory();
 renderExtraTips();
+updateHabitUI();
 
-   
+  
