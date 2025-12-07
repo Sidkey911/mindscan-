@@ -12,6 +12,9 @@ var habitsForm = document.getElementById("habitsForm");
 var habitScoreText = document.getElementById("habitScoreText");
 
 var HABITS_KEY = "mindscan_habits_v1";
+var themeToggle = document.getElementById("themeToggle");
+var THEME_KEY = "mindscan_theme";
+
 
 var resultCard = document.getElementById("resultCard");
 var resultBadge = document.getElementById("resultBadge");
@@ -645,8 +648,30 @@ if (saveProfileBtn) {
 if (extraTipsBtn) {
   extraTipsBtn.addEventListener("click", renderExtraTips);
 }
+function applyThemeFromStorage() {
+  var theme = localStorage.getItem(THEME_KEY);
+  if (theme === "light") {
+    document.body.classList.add("theme-light");
+  } else {
+    document.body.classList.remove("theme-light");
+  }
+}
+
+if (themeToggle) {
+  themeToggle.addEventListener("click", function () {
+    var theme = localStorage.getItem(THEME_KEY);
+    if (theme === "light") {
+      theme = "dark";
+    } else {
+      theme = "light";
+    }
+    localStorage.setItem(THEME_KEY, theme);
+    applyThemeFromStorage();
+  });
+}
 
 // ---------- INITIALISE ----------
+applyThemeFromStorage();
 fillProfileForm();
 renderHistory();
 renderExtraTips();
