@@ -20,6 +20,8 @@ var clearHistoryBtn = document.getElementById("clearHistory");
 
 var scoreBarInner = document.getElementById("scoreBarInner");
 var scoreBarLabel = document.getElementById("scoreBarLabel");
+var wellnessAvatar = document.getElementById("wellnessAvatar");
+var avatarText = document.getElementById("avatarText");
 
 // Profile
 var profileForm = document.getElementById("profileForm");
@@ -201,6 +203,26 @@ function interpretScore(score) {
       "Drink some water and check if you need food or rest.",
       "Plan one small positive action for yourself before the day ends."
     ];
+  }
+  // Wellness avatar
+  if (wellnessAvatar && avatarText) {
+    var emoji;
+    var text;
+    if (interpretation.status === "green") {
+      emoji = "🟢";
+      text =
+        "You are generally coping well today. Keep balanced habits and regular breaks.";
+    } else if (interpretation.status === "yellow") {
+      emoji = "🟡";
+      text =
+        "Early signs of stress. Try to slow down a bit and use breathing or a short walk.";
+    } else {
+      emoji = "🔴";
+      text =
+        "Your stress seems high. Please prioritise rest and, if possible, talk to someone you trust.";
+    }
+    wellnessAvatar.textContent = emoji;
+    avatarText.textContent = text;
   }
 
   return { status: status, label: label, message: message, suggestions: suggestions };
