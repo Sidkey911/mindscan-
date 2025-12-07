@@ -9,6 +9,18 @@
   <link rel="apple-touch-icon" href="icon-192.png" />
   <link rel="manifest" href="manifest.json" />
 </head>
+  <script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker
+        .register("/mindscan-/sw.js")
+        .catch(function (err) {
+          console.log("SW registration failed:", err);
+        });
+    });
+  }
+</script>
+
 <body>
   <header class="header">
     <div class="header-top">
