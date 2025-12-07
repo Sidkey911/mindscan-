@@ -463,6 +463,7 @@ function renderHistory() {
     historyList.appendChild(liEmpty);
     return;
   }
+  generateInsights();
 
   var copy = history.slice().reverse();
   for (var i = 0; i < copy.length; i++) {
@@ -650,5 +651,7 @@ fillProfileForm();
 renderHistory();
 renderExtraTips();
 updateHabitUI();
+generateInsights();
+
 
   
