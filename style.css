@@ -311,6 +311,18 @@ select:focus {
   font-size: 13px;
   color: #e5e7eb;
 }
+.habit-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.habit-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
 
 
 /* 4–4–4 cycle: 4s inhale, 4s hold, 4s exhale = 12s total */
