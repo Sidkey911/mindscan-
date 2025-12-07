@@ -9,6 +9,10 @@ var THEME_KEY = "mindscan_theme";
 // ---------- DOM ELEMENTS ----------
 var form = document.getElementById("scanForm");
 var clearBtn = document.getElementById("clearBtn");
+var coachInput = document.getElementById("coachInput");
+var coachButton = document.getElementById("coachButton");
+var coachReply = document.getElementById("coachReply");
+
 
 var resultCard = document.getElementById("resultCard");
 var resultBadge = document.getElementById("resultBadge");
@@ -682,6 +686,43 @@ if (saveProfileBtn) {
 // Extra tips button
 if (extraTipsBtn) {
   extraTipsBtn.addEventListener("click", renderExtraTips);
+}
+function getCoachReply(text) {
+  var t = (text || "").toLowerCase();
+
+  if (!t || t.length < 5) {
+    return "Try to describe what you feel and what situation you are in, then I can suggest one small step.";
+  }
+
+  if (t.indexOf("sleep") !== -1 || t.indexOf("insomnia") !== -1 || t.indexOf("tidur") !== -1) {
+    return "Sleep problems are very common when stressed. Try to set a fixed cut-off time for screens, do 3–5 minutes of breathing, and keep your room dim and quiet. If this continues for many nights, talk to a counsellor or doctor.";
+  }
+
+  if (t.indexOf("exam") !== -1 || t.indexOf("test") !== -1 || t.indexOf("assignment") !== -1) {
+    return "When exams or assignments feel overwhelming, break them into tiny tasks: list topics, set 25-minute focused blocks with short breaks, and start with the easiest piece. Combine this with good sleep instead of all-nighters.";
+  }
+
+  if (t.indexOf("friend") !== -1 || t.indexOf("family") !== -1 || t.indexOf("relationship") !== -1) {
+    return "Relationship stress can drain your energy a lot. Choose one safe person to talk to honestly, write down what you feel before you talk, and give yourself permission to set boundaries when you need space.";
+  }
+
+  if (t.indexOf("anxious") !== -1 || t.indexOf("anxiety") !== -1 || t.indexOf("panic") !== -1) {
+    return "During anxiety, focus on your body first: slow breathing (4–4–4), grounding with 5 things you see, 4 you can touch, 3 you can hear. After it settles, identify one small action that reduces the trigger.";
+  }
+
+  if (t.indexOf("motivation") !== -1 || t.indexOf("malas") !== -1 || t.indexOf("no energy") !== -1) {
+    return "Low motivation often means your brain is tired, not lazy. Start with a very small step (5–10 minutes of work), reward yourself, and connect the task to a personal goal or value that matters to you.";
+  }
+
+  return "Thank you for sharing. Try to combine healthy basics (sleep, food, water, movement) with small, realistic tasks. If the feeling is heavy for many days, please consider reaching out to a counsellor or trusted adult for support.";
+}
+
+if (coachButton && coachInput && coachReply) {
+  coachButton.addEventListener("click", function () {
+    var txt = coachInput.value;
+    var reply = getCoachReply(txt);
+    coachReply.textContent = reply;
+  });
 }
 
 // ---------- INITIALISE ----------
