@@ -514,3 +514,215 @@ body.theme-light-dark .result-message,
 body.theme-light-dark .avatar-text {
   color: #e5e7eb;
 }
+
+/* ---------- New layout bits ---------- */
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Floating action buttons */
+
+.fab {
+  position: fixed;
+  z-index: 50;
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  background: #38bdf8;
+  color: #020617;
+}
+
+.fab-coach {
+  bottom: 16px;
+  right: 16px;
+}
+
+.fab-breathing {
+  bottom: 16px;
+  left: 16px;
+}
+
+.fab-tips {
+  bottom: 80px;
+  right: 16px;
+}
+
+.fab:hover {
+  opacity: 0.95;
+}
+
+/* Panels for coach, breathing, tips */
+
+.coach-panel,
+.breathing-panel,
+.tips-panel {
+  position: fixed;
+  z-index: 60;
+  bottom: 80px;
+  right: 16px;
+  width: 320px;
+  max-width: calc(100% - 32px);
+  background: #020617;
+  border-radius: 16px;
+  border: 1px solid #1f2937;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+  padding: 12px 12px 14px;
+}
+
+.breathing-panel {
+  left: 16px;
+  right: auto;
+}
+
+.panel-header,
+.coach-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.panel-close,
+.coach-close {
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.coach-body {
+  font-size: 13px;
+}
+
+.coach-log {
+  max-height: 180px;
+  overflow-y: auto;
+  border-radius: 10px;
+  border: 1px solid #1f2937;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  background: #020617;
+}
+
+.coach-bubble {
+  margin-bottom: 4px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  max-width: 100%;
+}
+
+.coach-bubble.user {
+  background: #0f172a;
+  text-align: right;
+}
+
+.coach-bubble.bot {
+  background: #111827;
+}
+
+#coachInput {
+  width: 100%;
+  min-height: 60px;
+  resize: vertical;
+  border-radius: 10px;
+  border: 1px solid #334155;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  background: #020617;
+  color: #e5e7eb;
+}
+
+/* Adapt panels for light theme */
+
+body.theme-light .coach-panel,
+body.theme-light .breathing-panel,
+body.theme-light .tips-panel {
+  background: #ffffff;
+  border-color: #e2e8f0;
+}
+
+body.theme-light .coach-log {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+body.theme-light #coachInput {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+/* Modal style (history, XP) */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,0.7);
+  z-index: 70;
+}
+
+.modal-box {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  width: 90%;
+  max-width: 420px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: #020617;
+  border-radius: 16px;
+  border: 1px solid #1f2937;
+  padding: 16px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+}
+
+body.theme-light .modal-content {
+  background: #ffffff;
+  border-color: #e5e8f0;
+}
+
+.modal-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.modal-title-row h3 {
+  margin: 0;
+}
+
+.modal-close-btn {
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* Small text */
+
+.hint.small {
+  font-size: 11px;
+}
