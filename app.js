@@ -1,529 +1,394 @@
-// MindScan Lite - main logic (final stable version)
+// MindScan Lite main script
 
-// ---------- CONSTANTS ----------
-var HISTORY_KEY = "mindscan_history_v1";
-var PROFILE_KEY = "mindscan_profile_v1";
-var HABITS_KEY = "mindscan_habits_v1";
-var THEME_KEY = "mindscan_theme";
+const HISTORY_KEY = "mindscan_history_v1";
+const HABITS_KEY = "mindscan_habits_v1";
+const PROFILE_KEY = "mindscan_profile_v1";
 
-// ---------- DOM ELEMENTS ----------
-var form = document.getElementById("scanForm");
-var clearBtn = document.getElementById("clearBtn");
-var coachInput = document.getElementById("coachInput");
-var coachButton = document.getElementById("coachButton");
-var coachReply = document.getElementById("coachReply");
+// ---------- Helpers ----------
 
+function loadJSON(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const data = JSON.parse(raw);
+    return data === null || data === undefined ? fallback : data;
+  } catch {
+    return fallback;
+  }
+}
 
-var resultCard = document.getElementById("resultCard");
-var resultBadge = document.getElementById("resultBadge");
-var resultLabel = document.getElementById("resultLabel");
-var resultScore = document.getElementById("resultScore");
-var resultMessage = document.getElementById("resultMessage");
-var suggestionList = document.getElementById("suggestionList");
+function saveJSON(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.log("Save error", key, e);
+  }
+}
 
-var historyList = document.getElementById("historyList");
-var clearHistoryBtn = document.getElementById("clearHistory");
-
-var scoreBarInner = document.getElementById("scoreBarInner");
-var scoreBarLabel = document.getElementById("scoreBarLabel");
-
-var wellnessAvatar = document.getElementById("wellnessAvatar");
-var avatarText = document.getElementById("avatarText");
-
-// Profile
-var profileForm = document.getElementById("profileForm");
-var saveProfileBtn = document.getElementById("saveProfileBtn");
-
-// Breathing
-var breathingCircle = document.getElementById("breathingCircle");
-var breathingInstruction = document.getElementById("breathingInstruction");
-var breathingToggle = document.getElementById("breathingToggle");
-
-// Extra tips
-var extraTipsBtn = document.getElementById("extraTipsBtn");
-var extraTipsList = document.getElementById("extraTipsList");
-
-// Habits
-var habitsForm = document.getElementById("habitsForm");
-var habitScoreText = document.getElementById("habitScoreText");
-
-// Insights
-var insightsText = document.getElementById("insightsText");
-
-// Theme
-var themeToggle = document.getElementById("themeToggle");
-
-// ---------- STORAGE HELPERS ----------
 function loadHistory() {
-  try {
-    var data = JSON.parse(localStorage.getItem(HISTORY_KEY));
-    return Array.isArray(data) ? data : [];
-  } catch (e) {
-    return [];
-  }
+  const arr = loadJSON(HISTORY_KEY, []);
+  return Array.isArray(arr) ? arr : [];
 }
 
-function saveHistory(history) {
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-}
-
-function loadProfile() {
-  try {
-    var data = JSON.parse(localStorage.getItem(PROFILE_KEY));
-    return data || {};
-  } catch (e) {
-    return {};
-  }
-}
-
-function saveProfile(data) {
-  localStorage.setItem(PROFILE_KEY, JSON.stringify(data));
-}
-
-function todayKey() {
-  var d = new Date();
-  return d.toISOString().slice(0, 10);
+function saveHistory(list) {
+  saveJSON(HISTORY_KEY, list || []);
 }
 
 function loadHabits() {
-  try {
-    var raw = localStorage.getItem(HABITS_KEY);
-    if (!raw) return {};
-    var data = JSON.parse(raw);
-    return data || {};
-  } catch (e) {
-    return {};
-  }
+  return loadJSON(HABITS_KEY, {});
 }
 
-function saveHabits(all) {
-  localStorage.setItem(HABITS_KEY, JSON.stringify(all));
+function saveHabits(obj) {
+  saveJSON(HABITS_KEY, obj || {});
 }
 
-// ---------- PROFILE ----------
-function fillProfileForm() {
-  if (!profileForm) return;
-  var p = loadProfile();
-  profileForm.name.value = p.name || "";
-  profileForm.age.value = p.age || "";
-  profileForm.gender.value = p.gender || "";
-  profileForm.studentId.value = p.studentId || "";
-  profileForm.course.value = p.course || "";
-  profileForm.email.value = p.email || "";
+function loadProfile() {
+  return loadJSON(PROFILE_KEY, {});
 }
 
-// ---------- SCORING ----------
-function computeScore(values) {
-  var sleep = Number(values.sleep);
-  var energy = Number(values.energy);
-  var motivation = Number(values.motivation);
-  var stress = Number(values.stress);
-  var screen = Number(values.screen);
-  var mood = Number(values.mood);
-
-  var sleepPts = sleep;
-  var energyPts = energy;
-  var motivationPts = motivation;
-  var moodPts = mood;
-
-  var stressPenalty = stress;
-  var screenPenalty = 0;
-  if (screen === 2) screenPenalty = 1;
-  if (screen === 3) screenPenalty = 2;
-
-  var raw =
-    sleepPts + energyPts + motivationPts + moodPts - (stressPenalty + screenPenalty);
-
-  if (raw < 0) raw = 0;
-  return raw;
+function saveProfile(p) {
+  saveJSON(PROFILE_KEY, p || {});
 }
 
-// ---------- INTERPRETATION ----------
-function interpretScore(score) {
-  var s = Math.max(0, Math.round(score));
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
 
-  var status, label, message;
-  if (s >= 9) {
-    status = "green";
-    label = "Green - doing okay";
-    message =
-      "You seem to be in a relatively good state overall. Keep maintaining your healthy behaviours and continue to monitor your stress.";
-  } else if (s >= 5) {
-    status = "yellow";
-    label = "Yellow - mild stress warning";
-    message =
-      "You show some signs of stress or imbalance. It is a good time to slow down a bit and give yourself more care.";
+// ---------- DOM refs ----------
+
+const scanForm = document.getElementById("scanForm");
+const clearBtn = document.getElementById("clearBtn");
+const resultCard = document.getElementById("resultCard");
+const resultBadge = document.getElementById("resultBadge");
+const resultLabel = document.getElementById("resultLabel");
+const resultScore = document.getElementById("resultScore");
+const resultMessage = document.getElementById("resultMessage");
+const suggestionList = document.getElementById("suggestionList");
+const historyList = document.getElementById("historyList");
+const clearHistoryBtn = document.getElementById("clearHistory");
+const scoreBarInner = document.getElementById("scoreBarInner");
+const scoreBarLabel = document.getElementById("scoreBarLabel");
+const wellnessAvatar = document.getElementById("wellnessAvatar");
+const avatarText = document.getElementById("avatarText");
+const themeToggle = document.getElementById("themeToggle");
+
+const habitsForm = document.getElementById("habitsForm");
+const habitScoreText = document.getElementById("habitScoreText");
+const insightsText = document.getElementById("insightsText");
+
+const breathingCircle = document.getElementById("breathingCircle");
+const breathingInstruction = document.getElementById("breathingInstruction");
+const breathingToggle = document.getElementById("breathingToggle");
+
+const coachInput = document.getElementById("coachInput");
+const coachButton = document.getElementById("coachButton");
+const coachReply = document.getElementById("coachReply");
+
+const profileForm = document.getElementById("profileForm");
+const saveProfileBtn = document.getElementById("saveProfileBtn");
+
+const trendTextEl = document.getElementById("trendText");
+const patternTextEl = document.getElementById("patternText");
+const predictionTextEl = document.getElementById("predictionText");
+const twinTextEl = document.getElementById("twinText");
+const planTextEl = document.getElementById("planText");
+const habitImpactList = document.getElementById("habitImpactList");
+const xpSummaryEl = document.getElementById("xpSummary");
+const badgeListEl = document.getElementById("badgeList");
+const extraTipsList = document.getElementById("extraTipsList");
+const extraTipsBtn = document.getElementById("extraTipsBtn");
+
+// ---------- Theme ----------
+
+function initTheme() {
+  const stored = localStorage.getItem("mindscan_theme") || "light";
+  if (stored === "dark") {
+    document.body.classList.add("theme-light-dark");
+    if (themeToggle) themeToggle.textContent = "Switch to light theme";
   } else {
-    status = "red";
-    label = "Red - high stress risk";
-    message =
-      "Your answers suggest a high level of stress or low mood. It is important to rest and, if possible, talk to someone you trust.";
+    if (themeToggle) themeToggle.textContent = "Switch to dark theme";
   }
-
-  var suggestionMap = {
-    0: [
-      "Stop everything for a moment and check basic needs: have you eaten, drunk water, and slept enough?",
-      "Find a quiet place and do 3–5 minutes of slow breathing before continuing tasks.",
-      "If this level continues for several days, please consider contacting a counsellor or trusted adult."
-    ],
-    1: [
-      "Give yourself permission to take a full break from study/work for at least 30 minutes.",
-      "Reach out to someone you trust and tell them honestly how you feel.",
-      "Avoid big decisions today; focus only on simple, necessary tasks."
-    ],
-    2: [
-      "Choose one small task only and complete it slowly, then rest.",
-      "Limit social media for the next few hours to reduce mental overload.",
-      "Plan one comforting activity for tonight, such as a warm shower or favourite show."
-    ],
-    3: [
-      "Drink a full glass of water and have a light, balanced snack.",
-      "Do a 5-minute stretch for neck, shoulders, and back to release tension.",
-      "Write down everything that is worrying you, then circle only what needs attention today."
-    ],
-    4: [
-      "Schedule a short walk (5–10 minutes) outside or along the corridor.",
-      "Reduce caffeine for the rest of the day to avoid feeling more wired and anxious.",
-      "Set a realistic cut-off time tonight to stop studying and start winding down."
-    ],
-    5: [
-      "Organise your to-do list into: must do today, can do later, can drop.",
-      "Take a 5-minute breathing break before starting your next task.",
-      "If possible, talk briefly with a friend just to share how your day is going."
-    ],
-    6: [
-      "Protect 10–15 minutes tonight just for yourself (no phone) to unwind.",
-      "Swap one unhealthy snack today with a fruit, nuts, or yogurt.",
-      "Check your posture while studying and adjust your chair or table height."
-    ],
-    7: [
-      "Plan your next 24 hours with one small goal for sleep, food, and movement.",
-      "Do a quick digital declutter: close unused tabs and mute unnecessary notifications.",
-      "Celebrate one thing you handled well today, even if it feels small."
-    ],
-    8: [
-      "Maintain your current routine, but add one extra self-care action (for example, stretching before sleep).",
-      "Share something positive about your day with someone close to you.",
-      "Prepare your study/work area for tomorrow so you can start calmly."
-    ],
-    9: [
-      "Keep the same sleep schedule for the next few days to support your good state.",
-      "Use your energy to finish one task you’ve been delaying.",
-      "Do something kind for another person; helping others also supports your own wellness."
-    ],
-    10: [
-      "Document what is working well for you now (sleep, food, routine) so you can repeat it later.",
-      "Schedule a purposeful break: maybe light exercise, hobby time, or spiritual practice.",
-      "Check if there is any small habit that you can improve further, such as drinking more water."
-    ],
-    11: [
-      "Maintain balance: don’t overload yourself just because you feel okay now.",
-      "Take a moment to reflect on what you are grateful for today.",
-      "Keep practising short breaks to protect your mental energy in the long term."
-    ],
-    12: [
-      "You are doing very well; use this period to build strong habits that will help during stressful times.",
-      "Support a friend or classmate who may not be feeling as good as you right now.",
-      "Review your weekly schedule to ensure you still have enough time for rest and hobbies."
-    ],
-    13: [
-      "Great score. Continue maintaining your healthy lifestyle and boundaries.",
-      "Consider writing down your current routine as a ‘personal wellness plan’ to use during exam weeks.",
-      "Remember balance: even when you feel good, rest and downtime are still important."
-    ]
-  };
-
-  var suggestions = suggestionMap[s];
-  if (!suggestions) {
-    suggestions = [
-      "Take a short break and move your body for a few minutes.",
-      "Drink some water and check if you need food or rest.",
-      "Plan one small positive action for yourself before the day ends."
-    ];
-  }
-
-  return { status: status, label: label, message: message, suggestions: suggestions };
 }
 
-// ---------- RENDER RESULT ----------
-function renderResult(score, interpretation) {
-  if (!resultCard) return;
+if (themeToggle) {
+  themeToggle.addEventListener("click", () => {
+    const isDark = document.body.classList.toggle("theme-light-dark");
+    localStorage.setItem("mindscan_theme", isDark ? "dark" : "light");
+    themeToggle.textContent = isDark
+      ? "Switch to light theme"
+      : "Switch to dark theme";
+  });
+}
 
+initTheme();
+
+// ---------- Profile ----------
+
+(function initProfile() {
+  if (!profileForm) return;
+  const p = loadProfile();
+  if (p) {
+    if (p.name) profileForm.elements.name.value = p.name;
+    if (p.age) profileForm.elements.age.value = p.age;
+    if (p.gender) profileForm.elements.gender.value = p.gender;
+    if (p.studentId) profileForm.elements.studentId.value = p.studentId;
+    if (p.course) profileForm.elements.course.value = p.course;
+    if (p.email) profileForm.elements.email.value = p.email;
+  }
+})();
+
+if (saveProfileBtn && profileForm) {
+  saveProfileBtn.addEventListener("click", () => {
+    const form = profileForm.elements;
+    const profile = {
+      name: form.name.value.trim(),
+      age: form.age.value,
+      gender: form.gender.value,
+      studentId: form.studentId.value.trim(),
+      course: form.course.value.trim(),
+      email: form.email.value.trim()
+    };
+    saveProfile(profile);
+    alert("Profile saved on this device.");
+  });
+}
+
+// ---------- Scoring logic ----------
+
+function computeResult(values) {
+  const sleep = Number(values.sleep);
+  const energy = Number(values.energy);
+  const motivation = Number(values.motivation);
+  const stress = Number(values.stress);
+  const screen = Number(values.screen);
+  const mood = Number(values.mood);
+
+  const positive = sleep + energy + motivation + mood; // 4..20
+  const negative = (stress - 1) * 1.5 + (screen - 1) * 1.0; // 0..8
+  let raw = positive - negative; // -4 .. 20
+
+  // normalise to 0..12
+  let norm = ((raw + 4) / 24) * 12;
+  if (norm < 0) norm = 0;
+  if (norm > 12) norm = 12;
+  const score = norm;
+
+  let label;
+  if (score >= 9) label = "Green - doing okay";
+  else if (score >= 5) label = "Yellow - mild stress warning";
+  else label = "Red - high stress risk";
+
+  let message;
+  if (label.startsWith("Green")) {
+    message =
+      "Overall you seem to be coping fairly well today. Still, keep protecting your sleep, breaks and healthy connections so your wellness stays stable.";
+  } else if (label.startsWith("Yellow")) {
+    message =
+      "You show some signs of stress or imbalance. This is a good time to slow down a bit, tidy your routine and give yourself more care before it becomes heavy.";
+  } else {
+    message =
+      "Your answers show high stress or low mood. Please treat today gently: reduce pressure where possible, use calming strategies, and reach out to someone you trust if this feeling continues.";
+  }
+
+  const suggestions = [];
+
+  // personalised actions
+  if (sleep <= 2) {
+    suggestions.push(
+      "Plan a fixed sleep time tonight and avoid screens at least 30 minutes before bed."
+    );
+  }
+  if (energy <= 2) {
+    suggestions.push(
+      "Consider a 10–15 minute walk or light stretching to gently boost your energy."
+    );
+  }
+  if (motivation <= 2) {
+    suggestions.push(
+      "Break your tasks into very small steps (5–10 minutes) and start with the easiest one."
+    );
+  }
+  if (stress >= 4) {
+    suggestions.push(
+      "Use the 4–4–4 breathing exercise in this app or another relaxation method for a few minutes."
+    );
+  }
+  if (screen === 3) {
+    suggestions.push(
+      "Try to reduce non-study screen time tonight and replace it with an offline activity you enjoy."
+    );
+  }
+  if (mood <= 2) {
+    suggestions.push(
+      "Talk to someone you trust about how you feel, even briefly, or write it down in a journal."
+    );
+  }
+
+  if (!suggestions.length) {
+    suggestions.push(
+      "Document what is working well for you now (sleep, food, routine) so you can repeat it later."
+    );
+    suggestions.push(
+      "Schedule a purposeful break like light exercise, hobby time or spiritual practice."
+    );
+  }
+
+  let avatar = "🙂";
+  let avatarMsg = "You seem reasonably balanced today.";
+  if (label.startsWith("Yellow")) {
+    avatar = "😐";
+    avatarMsg = "Some tension is showing up; small changes can help you feel lighter.";
+  }
+  if (label.startsWith("Red")) {
+    avatar = "😟";
+    avatarMsg = "Your answers show a tough day. Please take extra care of yourself.";
+  }
+
+  return {
+    score,
+    label,
+    message,
+    suggestions,
+    avatar,
+    avatarMsg
+  };
+}
+
+// ---------- Render result ----------
+
+function showResult(res) {
+  if (!resultCard) return;
   resultCard.hidden = false;
 
+  resultLabel.textContent = res.label;
+  resultScore.textContent = "Score: " + res.score.toFixed(1);
+  resultMessage.textContent = res.message;
+
+  suggestionList.innerHTML = "";
+  res.suggestions.forEach((s) => {
+    const li = document.createElement("li");
+    li.textContent = s;
+    suggestionList.appendChild(li);
+  });
+
+  // Badge color
   resultBadge.classList.remove("status-green", "status-yellow", "status-red");
-  if (interpretation.status === "green") {
+  if (res.label.startsWith("Green")) {
     resultBadge.classList.add("status-green");
-  } else if (interpretation.status === "yellow") {
+  } else if (res.label.startsWith("Yellow")) {
     resultBadge.classList.add("status-yellow");
   } else {
     resultBadge.classList.add("status-red");
   }
 
-  resultLabel.textContent = interpretation.label;
-  resultScore.textContent = "Score: " + score.toFixed(1);
-  resultMessage.textContent = interpretation.message;
-
-  // suggestions
-  suggestionList.innerHTML = "";
-  for (var i = 0; i < interpretation.suggestions.length; i++) {
-    var li = document.createElement("li");
-    li.textContent = interpretation.suggestions[i];
-    suggestionList.appendChild(li);
+  // Score bar
+  if (scoreBarInner) {
+    const pct = (res.score / 12) * 100;
+    scoreBarInner.style.width = pct.toFixed(0) + "%";
+  }
+  if (scoreBarLabel) {
+    scoreBarLabel.textContent = "Wellness level today (0–12 scale).";
   }
 
-  // wellness bar
-  if (scoreBarInner && scoreBarLabel) {
-    var maxScore = 13;
-    var pct = (score / maxScore) * 100;
-    if (pct < 0) pct = 0;
-    if (pct > 100) pct = 100;
-    scoreBarInner.style.width = pct + "%";
-
-    var desc;
-    if (interpretation.status === "green") desc = "Wellness level: good";
-    else if (interpretation.status === "yellow") desc = "Wellness level: moderate";
-    else desc = "Wellness level: low";
-
-    scoreBarLabel.textContent =
-      desc + " (" + score.toFixed(1) + " / " + maxScore + ")";
-  }
-
-  // wellness avatar
-  if (wellnessAvatar && avatarText) {
-    var emoji;
-    var text;
-    if (interpretation.status === "green") {
-      emoji = "🟢";
-      text =
-        "You are generally coping well today. Keep balanced habits and regular breaks.";
-    } else if (interpretation.status === "yellow") {
-      emoji = "🟡";
-      text =
-        "Early signs of stress. Try to slow down a bit and use breathing or a short walk.";
-    } else {
-      emoji = "🔴";
-      text =
-        "Your stress seems high. Please prioritise rest and, if possible, talk to someone you trust.";
-    }
-    wellnessAvatar.textContent = emoji;
-    avatarText.textContent = text;
-  }
+  // Avatar
+  if (wellnessAvatar) wellnessAvatar.textContent = res.avatar;
+  if (avatarText) avatarText.textContent = res.avatarMsg;
 }
 
-// ---------- HISTORY ----------
+// ---------- History ----------
+
 function renderHistory() {
-  if (!historyList) return;
-  var history = loadHistory();
-
+  const history = loadHistory();
   historyList.innerHTML = "";
-  if (!history.length) {
-    var liEmpty = document.createElement("li");
-    liEmpty.textContent = "No previous scans yet.";
-    historyList.appendChild(liEmpty);
-    generateInsights();
-    return;
-  }
 
-  var copy = history.slice().reverse();
-  for (var i = 0; i < copy.length; i++) {
-    var item = copy[i];
-    var li = document.createElement("li");
-    var left = document.createElement("span");
-    var right = document.createElement("span");
-    left.textContent = item.date + " - " + item.label;
-    right.textContent = "Score " + Number(item.score).toFixed(1);
-    right.className = "history-score";
-    li.appendChild(left);
-    li.appendChild(right);
+  if (!history.length) {
+    const li = document.createElement("li");
+    li.textContent = "No scans yet. Run MindScan to build your history.";
     historyList.appendChild(li);
+  } else {
+    history
+      .slice()
+      .reverse()
+      .forEach((item) => {
+        const li = document.createElement("li");
+        const left = document.createElement("span");
+        const right = document.createElement("span");
+        left.textContent = `${item.date} - ${item.label}`;
+        right.textContent = `Score ${Number(item.score).toFixed(1)}`;
+        right.className = "history-score";
+        li.appendChild(left);
+        li.appendChild(right);
+        historyList.appendChild(li);
+      });
   }
 
   generateInsights();
 }
 
-// ---------- EXTRA TIPS ----------
-var extraTipsPool = [
-  "Take 5 deep breaths before you check your phone in the morning.",
-  "Keep a water bottle on your table and sip every 20 minutes.",
-  "Stand up and stretch for 30 seconds after each long task.",
-  "Try to keep one hour before sleep free from social media scrolling.",
-  "Write down three things you are grateful for today.",
-  "Eat at least one serving of fruit or vegetables with your main meal.",
-  "Schedule a ‘no-study’ block this week just for rest or hobbies.",
-  "Do a short walk outdoors or near a window to get some daylight.",
-  "Lower your screen brightness at night and turn on night mode.",
-  "Choose one person to send a kind message to today."
-];
+// ---------- Insights, pattern detection, prediction, XP, habit impact ----------
 
-function pickRandomTips(n) {
-  var copy = extraTipsPool.slice();
-  var chosen = [];
-  while (copy.length && chosen.length < n) {
-    var idx = Math.floor(Math.random() * copy.length);
-    chosen.push(copy[idx]);
-    copy.splice(idx, 1);
-  }
-  return chosen;
-}
-
-function renderExtraTips() {
-  if (!extraTipsList) return;
-  extraTipsList.innerHTML = "";
-  var tips = pickRandomTips(3);
-  for (var i = 0; i < tips.length; i++) {
-    var li = document.createElement("li");
-    li.textContent = tips[i];
-    extraTipsList.appendChild(li);
-  }
-}
-
-// ---------- BREATHING (4-4-4) ----------
-var breathingOn = false;
-var breathingTimer = null;
-
-function resetBreathingText() {
-  if (breathingInstruction) {
-    breathingInstruction.textContent =
-      'Tap "Start breathing" to begin a 4–4–4 breathing cycle.';
-  }
-}
-
-function startBreathingLoop() {
-  if (!breathingInstruction) return;
-  var phase = 0; // 0 inhale, 1 hold, 2 exhale
-
-  function nextPhase() {
-    if (!breathingOn) return;
-
-    if (phase === 0) {
-      breathingInstruction.textContent = "Inhale slowly for 4 seconds…";
-    } else if (phase === 1) {
-      breathingInstruction.textContent = "Hold your breath for 4 seconds…";
-    } else {
-      breathingInstruction.textContent = "Exhale gently for 4 seconds…";
-    }
-
-    if (navigator.vibrate) {
-      navigator.vibrate(80);
-    }
-
-    phase = (phase + 1) % 3;
-    breathingTimer = setTimeout(nextPhase, 4000);
-  }
-
-  nextPhase();
-}
-
-function stopBreathingLoop() {
-  if (breathingTimer) clearTimeout(breathingTimer);
-  breathingTimer = null;
-  resetBreathingText();
-}
-
-if (breathingToggle && breathingCircle) {
-  resetBreathingText();
-  breathingToggle.addEventListener("click", function () {
-    breathingOn = !breathingOn;
-    if (breathingOn) {
-      breathingCircle.classList.add("breathing-active");
-      breathingToggle.textContent = "Stop breathing exercise";
-      startBreathingLoop();
-    } else {
-      breathingCircle.classList.remove("breathing-active");
-      breathingToggle.textContent = "Start breathing";
-      stopBreathingLoop();
-    }
-  });
-}
-
-// ---------- HABIT TRACKER ----------
-function updateHabitUI() {
-  if (!habitsForm || !habitScoreText) return;
-  var all = loadHabits();
-  var today = todayKey();
-  var todayData = all[today] || {};
-  var total = 5;
-  var done = 0;
-
-  ["sleep7", "water", "movement", "mindful", "lowScreen"].forEach(function (name) {
-    var input = habitsForm.elements[name];
-    if (input) {
-      input.checked = !!todayData[name];
-      if (input.checked) done++;
-    }
-  });
-
-  habitScoreText.textContent = "Today’s habit score: " + done + " / " + total;
-}
-
-if (habitsForm) {
-  habitsForm.addEventListener("change", function () {
-    var all = loadHabits();
-    var today = todayKey();
-    all[today] = {
-      sleep7: habitsForm.elements["sleep7"].checked,
-      water: habitsForm.elements["water"].checked,
-      movement: habitsForm.elements["movement"].checked,
-      mindful: habitsForm.elements["mindful"].checked,
-      lowScreen: habitsForm.elements["lowScreen"].checked
-    };
-    saveHabits(all);
-    updateHabitUI();
-    generateInsights();
-  });
-}
-
-// ---------- SMART INSIGHTS ----------
 function generateInsights() {
   if (!insightsText) return;
 
-  var history = loadHistory();
+  const history = loadHistory();
   if (!history.length) {
     insightsText.textContent =
       "Run MindScan a few times and we will show patterns in your stress, mood and habits here.";
+
+    if (trendTextEl) trendTextEl.textContent = "";
+    if (patternTextEl) patternTextEl.textContent = "";
+    if (predictionTextEl) predictionTextEl.textContent = "";
+    if (twinTextEl) twinTextEl.textContent = "";
+    if (planTextEl) planTextEl.textContent = "";
+    if (habitImpactList) habitImpactList.innerHTML = "";
+    if (xpSummaryEl) xpSummaryEl.textContent = "";
+    if (badgeListEl) badgeListEl.innerHTML = "";
     return;
   }
 
-  var last = history[history.length - 1];
-  var total = history.length;
-  var sum = 0;
-  var redCount = 0;
-  var yellowCount = 0;
-  var greenCount = 0;
+  const last = history[history.length - 1];
+  const total = history.length;
+  let sum = 0;
+  let redCount = 0;
+  let yellowCount = 0;
+  let greenCount = 0;
 
-  history.forEach(function (h) {
-    var sc = Number(h.score) || 0;
+  history.forEach((h) => {
+    const sc = Number(h.score) || 0;
     sum += sc;
-    var label = h.label || "";
-    if (label.indexOf("Red") === 0) redCount++;
-    else if (label.indexOf("Yellow") === 0) yellowCount++;
-    else if (label.indexOf("Green") === 0) greenCount++;
+    const label = h.label || "";
+    if (label.startsWith("Red")) redCount++;
+    else if (label.startsWith("Yellow")) yellowCount++;
+    else if (label.startsWith("Green")) greenCount++;
   });
 
-  var avg = sum / total;
+  const avg = sum / total;
 
-  var trendText = "";
+  // Trend
+  let trendText = "";
   if (history.length >= 4) {
-    var firstAvg =
+    const firstAvg =
       (Number(history[0].score) + Number(history[1].score)) / 2;
-    var lastAvg =
+    const lastAvg =
       (Number(history[history.length - 1].score) +
         Number(history[history.length - 2].score)) /
       2;
 
     if (lastAvg - firstAvg > 1) {
       trendText =
-        "Your recent scores are improving compared to earlier scans.";
+        "Your recent wellness scores are improving compared to earlier scans.";
     } else if (firstAvg - lastAvg > 1) {
       trendText =
-        "Recent scores are slightly lower than before, which may indicate increasing stress.";
+        "Recent scores are lower than before, which may indicate increasing stress.";
     } else {
       trendText = "Your overall wellness has been fairly stable.";
     }
+  } else {
+    trendText = "More scans are needed to see a clear trend.";
   }
 
-  var colourText = "";
+  // Colour pattern
+  let colourText = "";
   if (redCount >= 2) {
     colourText =
       "You have had " +
@@ -537,36 +402,55 @@ function generateInsights() {
       "Most of your scans are in the green zone. Keep protecting your healthy habits.";
   }
 
-  var predictionText = "";
+  // Short-term prediction (next day)
+  let predictionText = "";
   if (history.length >= 3) {
-    var last3 = history.slice(-3);
-    var psum = 0;
-    last3.forEach(function (h) {
+    const last3 = history.slice(-3);
+    let psum = 0;
+    last3.forEach((h) => {
       psum += Number(h.score) || 0;
     });
-    var pred = psum / last3.length;
-    var level;
+    const pred = psum / last3.length;
+    let level;
     if (pred >= 9) level = "likely to be in the green zone (doing okay)";
     else if (pred >= 5)
       level = "likely to be in the yellow zone (mild stress)";
     else level = "at risk of entering the red zone (high stress)";
 
     predictionText =
-      "Based on your last three scans, your wellness for the next day is " +
-      level +
-      ".";
+      "Based on your last three scans, tomorrow you are " + level + ".";
+  } else {
+    predictionText =
+      "After a few more scans, we can start predicting your next-day wellness.";
   }
 
-  var habitExtra = "";
+  // Habit summary from today's habit widget
+  let habitExtra = "";
   if (habitScoreText) {
-    var t = habitScoreText.textContent || "";
-    if (t.indexOf("0 / 5") !== -1 || t.indexOf("1 / 5") !== -1) {
+    const t = habitScoreText.textContent || "";
+    if (t.includes("0 / 5") || t.includes("1 / 5")) {
       habitExtra =
-        "Your habit score today is quite low. Strengthening basic habits (sleep, water, movement, quiet time, low screen) will support better scores.";
-    } else if (t.indexOf("4 / 5") !== -1 || t.indexOf("5 / 5") !== -1) {
+        "Your habit score today is quite low. Strengthening basics (sleep, water, movement, quiet time, low screen) will support better scores.";
+    } else if (t.includes("4 / 5") || t.includes("5 / 5")) {
       habitExtra =
         "You are doing well with your daily habits. This strongly supports your mental health.";
     }
+  }
+
+  // Digital twin type
+  let twinType;
+  if (avg >= 9 && greenCount >= yellowCount && greenCount >= redCount) {
+    twinType =
+      "Resilient Balancer – generally coping well with occasional stress spikes.";
+  } else if (avg >= 6 && yellowCount >= greenCount && yellowCount > redCount) {
+    twinType =
+      "Overloaded Achiever – functioning, but often under moderate stress. Small adjustments in routine could give a big improvement.";
+  } else if (avg < 6 && redCount >= yellowCount) {
+    twinType =
+      "Tired Struggler – your answers show frequent high stress or low mood. It may help to seek more support and protect your rest time.";
+  } else {
+    twinType =
+      "Mixed Pattern – your wellness scores move up and down. Tracking habits and stressors more closely can help stabilise your days.";
   }
 
   insightsText.innerHTML =
@@ -580,137 +464,343 @@ function generateInsights() {
     " across " +
     total +
     " scans.<br>" +
-    (trendText ? "<strong>Trend:</strong> " + trendText + "<br>" : "") +
     "<strong>Colour pattern:</strong> " +
     colourText +
-    "<br>" +
-    (predictionText
-      ? "<strong>Prediction:</strong> " + predictionText + "<br>"
-      : "") +
-    (habitExtra ? "<strong>Habits:</strong> " + habitExtra : "");
+    (habitExtra ? "<br><strong>Habits:</strong> " + habitExtra : "");
+
+  if (trendTextEl) trendTextEl.textContent = "Trend: " + trendText;
+  if (predictionTextEl) predictionTextEl.textContent = "Prediction: " + predictionText;
+  if (twinTextEl) twinTextEl.textContent = "Your wellness type: " + twinType;
+
+  // Pattern detection
+  let patternMessage = "";
+  if (redCount >= 2 && avg < 6) {
+    patternMessage =
+      "Pattern detected: high stress risk. Many days show low scores – please consider building a stronger rest routine and seeking support.";
+  } else if (yellowCount > greenCount && avg >= 6 && avg < 9) {
+    patternMessage =
+      "Pattern detected: digital or workload overload. You are functioning but under constant pressure – try to protect sleep and reduce late-night screen time.";
+  } else if (greenCount >= yellowCount && avg >= 9) {
+    patternMessage =
+      "Pattern detected: generally healthy routine. Keep repeating what works for you (sleep, food, movement and breaks).";
+  } else {
+    patternMessage =
+      "Pattern detected: fluctuating days. Watch for triggers that make some days much lower than others.";
+  }
+  if (patternTextEl) patternTextEl.textContent = patternMessage;
+
+  // Action plan based on risk level
+  let planText = "";
+  const highRisk =
+    avg < 6 || redCount >= 2 || predictionText.includes("red zone");
+  const moderateRisk =
+    !highRisk &&
+    (yellowCount > greenCount || predictionText.includes("yellow zone"));
+  const mostlyGreen = !highRisk && !moderateRisk && greenCount >= yellowCount;
+
+  if (highRisk) {
+    planText =
+      "Action plan (next 3–7 days): 1) Protect sleep as your first priority (fixed bedtime, no screens 30–60 minutes before). 2) Do at least one short calming activity daily (breathing exercise in this app, prayer, journaling or quiet walk). 3) Reduce unnecessary screen time and multitasking. 4) Choose one safe person to talk to about how you feel. If you still get many red days, consider meeting a counsellor or mental health professional.";
+  } else if (moderateRisk) {
+    planText =
+      "Action plan (next 3–7 days): 1) Identify your biggest stress source and break it into tiny tasks. 2) Keep a minimum of 7 hours of sleep on most nights. 3) Limit late-night scrolling and schedule at least one short break block every 60–90 minutes of study or work. 4) Use the breathing exercise on days when your score feels lower than usual.";
+  } else if (mostlyGreen) {
+    planText =
+      "Action plan (maintenance): 1) Continue the habits that keep you in the green zone. 2) Plan buffer days before big exams instead of last-minute rush. 3) Share healthy strategies with a friend who may be struggling. 4) Keep using MindScan once or twice a week to detect early changes.";
+  } else {
+    planText =
+      "Action plan: keep tracking your days and try simple adjustments – consistent sleep timing, a bit of daily movement, and short breaks away from screens. Use your trends to see which changes help you feel better.";
+  }
+
+  if (planTextEl) {
+    planTextEl.textContent = "Action plan: " + planText;
+  }
+
+  updateHabitImpactAndXP(history, avg, {
+    green: greenCount,
+    yellow: yellowCount,
+    red: redCount
+  });
 }
 
-// ---------- THEME ----------
-function applyThemeFromStorage() {
-  var theme = localStorage.getItem(THEME_KEY);
-  if (theme === "light") {
-    document.body.classList.add("theme-light");
-  } else {
-    document.body.classList.remove("theme-light");
+function updateHabitImpactAndXP(history, avgScore, counts) {
+  const allHabits = loadHabits();
+
+  // Habit impact
+  if (habitImpactList) {
+    habitImpactList.innerHTML = "";
+
+    const habitKeys = ["sleep7", "water", "movement", "mindful", "lowScreen"];
+    const habitLabels = {
+      sleep7: "Slept at least 7 hours",
+      water: "Drank at least 1 litre of water",
+      movement: "Did some physical movement / exercise",
+      mindful: "Relaxation / prayer / mindfulness",
+      lowScreen: "Limited non-study screen time at night"
+    };
+
+    const stats = {};
+    habitKeys.forEach((k) => {
+      stats[k] = { with: [], without: [] };
+    });
+
+    history.forEach((h) => {
+      const date = h.date;
+      const sc = Number(h.score) || 0;
+      const hv = allHabits[date];
+      if (!hv) return;
+
+      habitKeys.forEach((k) => {
+        if (hv[k]) stats[k].with.push(sc);
+        else stats[k].without.push(sc);
+      });
+    });
+
+    habitKeys.forEach((k) => {
+      const s = stats[k];
+      if (!s) return;
+      if (s.with.length < 2 && s.without.length < 2) return;
+
+      const avg = (arr) =>
+        arr.reduce((a, b) => a + b, 0) / (arr.length || 1);
+
+      const avgWith = s.with.length ? avg(s.with) : null;
+      const avgWithout = s.without.length ? avg(s.without) : null;
+      if (avgWith === null || avgWithout === null) return;
+
+      const diff = avgWith - avgWithout;
+      const li = document.createElement("li");
+      let message =
+        "When you did \"" +
+        habitLabels[k] +
+        "\", your average score was " +
+        avgWith.toFixed(1) +
+        " vs " +
+        avgWithout.toFixed(1) +
+        " on days you skipped it.";
+
+      if (diff > 0.7) {
+        message += " This habit has a strong positive impact on your wellness.";
+      } else if (diff > 0.3) {
+        message += " This habit seems to support your wellness.";
+      } else if (diff < -0.5) {
+        message +=
+          " On days you used this habit, scores were lower – check if you usually do it only when already very stressed.";
+      }
+
+      li.textContent = message;
+      habitImpactList.appendChild(li);
+    });
+
+    if (!habitImpactList.children.length) {
+      const liEmpty = document.createElement("li");
+      liEmpty.textContent =
+        "More days of data are needed before we can estimate how each habit affects your score.";
+      habitImpactList.appendChild(liEmpty);
+    }
+  }
+
+  // XP & badges
+  if (!xpSummaryEl || !badgeListEl) return;
+
+  let xp = 0;
+  history.forEach((h) => {
+    const label = h.label || "";
+    if (label.startsWith("Green")) xp += 5;
+    else if (label.startsWith("Yellow")) xp += 3;
+    else xp += 1;
+  });
+
+  Object.keys(allHabits || {}).forEach((date) => {
+    const hv = allHabits[date];
+    if (!hv) return;
+    Object.keys(hv).forEach((k) => {
+      if (hv[k]) xp += 1;
+    });
+  });
+
+  const level = Math.floor(xp / 25) + 1;
+
+  xpSummaryEl.textContent =
+    "Total wellness XP: " +
+    xp +
+    " • Level " +
+    level +
+    " (higher levels mean more consistent self-care and check-ins).";
+
+  badgeListEl.innerHTML = "";
+
+  const totalScans = history.length;
+
+  function addBadge(text) {
+    const li = document.createElement("li");
+    li.textContent = text;
+    badgeListEl.appendChild(li);
+  }
+
+  if (totalScans >= 7) {
+    addBadge("Consistency Starter – you have recorded at least 7 wellness check-ins.");
+  }
+  if (totalScans >= 21) {
+    addBadge("Habit Builder – more than 21 check-ins, building a long-term picture of your wellness.");
+  }
+
+  let longestGreen = 0;
+  let currentGreen = 0;
+  history.forEach((h) => {
+    if ((h.label || "").startsWith("Green")) {
+      currentGreen++;
+      if (currentGreen > longestGreen) longestGreen = currentGreen;
+    } else {
+      currentGreen = 0;
+    }
+  });
+  if (longestGreen >= 3) {
+    addBadge("Calm Streak – at least " + longestGreen + " green days in a row.");
+  }
+
+  const hadRed = history.some((h) => (h.label || "").startsWith("Red"));
+  const latestIsGreen = (history[history.length - 1].label || "").startsWith(
+    "Green"
+  );
+  if (hadRed && latestIsGreen) {
+    addBadge("Bounce Back – you returned to green after a high-stress period.");
+  }
+
+  if (avgScore >= 9 && counts.green >= counts.yellow && counts.green >= counts.red) {
+    addBadge("Resilience Badge – your average score is very high over time.");
+  }
+
+  if (!badgeListEl.children.length) {
+    addBadge("Keep scanning and practising habits to unlock wellness badges.");
   }
 }
 
-if (themeToggle) {
-  themeToggle.addEventListener("click", function () {
-    var theme = localStorage.getItem(THEME_KEY);
-    if (theme === "light") {
-      theme = "dark";
-    } else {
-      theme = "light";
-    }
-    localStorage.setItem(THEME_KEY, theme);
-    applyThemeFromStorage();
+// ---------- Habits ----------
+
+function updateHabitScoreText() {
+  if (!habitScoreText || !habitsForm) return;
+  const checkboxes = habitsForm.querySelectorAll("input[type=checkbox]");
+  let done = 0;
+  checkboxes.forEach((cb) => {
+    if (cb.checked) done++;
   });
+  habitScoreText.textContent = "Today’s habit score: " + done + " / 5";
 }
 
-// ---------- EVENT LISTENERS ----------
+function initHabits() {
+  if (!habitsForm) return;
+  const allHabits = loadHabits();
+  const today = todayISO();
+  const todayHabits = allHabits[today] || {};
 
-// Main form submit
-if (form) {
-  form.addEventListener("submit", function (e) {
-    e.preventDefault();
+  const checkboxes = habitsForm.querySelectorAll("input[type=checkbox]");
+  checkboxes.forEach((cb) => {
+    cb.checked = !!todayHabits[cb.name];
+  });
+  updateHabitScoreText();
 
-    var formData = new FormData(form);
-    var values = {
-      sleep: formData.get("sleep"),
-      energy: formData.get("energy"),
-      motivation: formData.get("motivation"),
-      stress: formData.get("stress"),
-      screen: formData.get("screen"),
-      mood: formData.get("mood")
-    };
-
-    var score = computeScore(values);
-    var interpretation = interpretScore(score);
-    renderResult(score, interpretation);
-
-    var today = new Date();
-    var dateStr = today.toISOString().slice(0, 10);
-
-    var history = loadHistory();
-    history.push({
-      date: dateStr,
-      score: score,
-      label: interpretation.label
+  habitsForm.addEventListener("change", () => {
+    const all = loadHabits();
+    const t = todayISO();
+    const obj = {};
+    const cbs = habitsForm.querySelectorAll("input[type=checkbox]");
+    cbs.forEach((cb) => {
+      obj[cb.name] = cb.checked;
     });
-    saveHistory(history);
-    renderHistory();
+    all[t] = obj;
+    saveHabits(all);
+    updateHabitScoreText();
+    generateInsights();
   });
 }
 
-// Clear form
-if (clearBtn) {
-  clearBtn.addEventListener("click", function () {
-    if (form) form.reset();
-    if (resultCard) resultCard.hidden = true;
-  });
-}
+initHabits();
 
-// Clear history
-if (clearHistoryBtn) {
-  clearHistoryBtn.addEventListener("click", function () {
-    if (confirm("Clear all saved scan history from this browser?")) {
-      localStorage.removeItem(HISTORY_KEY);
-      renderHistory();
+// ---------- Breathing exercise ----------
+
+if (breathingToggle && breathingCircle && breathingInstruction) {
+  let breathingOn = false;
+  breathingToggle.addEventListener("click", () => {
+    breathingOn = !breathingOn;
+    if (breathingOn) {
+      breathingCircle.classList.add("breathing-active");
+      breathingInstruction.textContent =
+        "Inhale for 4 seconds as the circle grows, hold for 4, exhale for 4 as it shrinks.";
+      breathingToggle.textContent = "Stop breathing exercise";
+    } else {
+      breathingCircle.classList.remove("breathing-active");
+      breathingInstruction.textContent =
+        "Tap \"Start breathing\" to begin a 4–4–4 breathing cycle.";
+      breathingToggle.textContent = "Start breathing";
     }
   });
 }
 
-// Save profile
-if (saveProfileBtn) {
-  saveProfileBtn.addEventListener("click", function () {
-    if (!profileForm) return;
-    var data = {
-      name: profileForm.name.value.trim(),
-      age: profileForm.age.value.trim(),
-      gender: profileForm.gender.value,
-      studentId: profileForm.studentId.value.trim(),
-      course: profileForm.course.value.trim(),
-      email: profileForm.email.value.trim()
-    };
-    saveProfile(data);
-    alert("Profile saved successfully!");
+// ---------- Extra tips ----------
+
+const extraTipsPool = [
+  "Do a 5-minute stretch or walk between classes to reset your body.",
+  "Drink a glass of water before you continue scrolling or studying.",
+  "Write down three small wins or things you are grateful for today.",
+  "Put your phone away from your bed 30 minutes before sleep.",
+  "Plan tomorrow’s top 3 priorities so your mind can relax at night.",
+  "If your thoughts race, try slow counting breaths from 1 to 10.",
+  "Schedule a short catch-up with a friend or family member.",
+  "Change your study location for a fresh environment."
+];
+
+if (extraTipsBtn && extraTipsList) {
+  extraTipsBtn.addEventListener("click", () => {
+    extraTipsList.innerHTML = "";
+    const shuffled = extraTipsPool.sort(() => Math.random() - 0.5);
+    shuffled.slice(0, 3).forEach((tip) => {
+      const li = document.createElement("li");
+      li.textContent = tip;
+      extraTipsList.appendChild(li);
+    });
   });
 }
 
-// Extra tips button
-if (extraTipsBtn) {
-  extraTipsBtn.addEventListener("click", renderExtraTips);
-}
+// ---------- AI Coach (rule-based) ----------
+
 function getCoachReply(text) {
-  var t = (text || "").toLowerCase();
+  const t = (text || "").toLowerCase();
 
   if (!t || t.length < 5) {
     return "Try to describe what you feel and what situation you are in, then I can suggest one small step.";
   }
 
-  if (t.indexOf("sleep") !== -1 || t.indexOf("insomnia") !== -1 || t.indexOf("tidur") !== -1) {
+  if (t.includes("sleep") || t.includes("insomnia") || t.includes("tidur")) {
     return "Sleep problems are very common when stressed. Try to set a fixed cut-off time for screens, do 3–5 minutes of breathing, and keep your room dim and quiet. If this continues for many nights, talk to a counsellor or doctor.";
   }
 
-  if (t.indexOf("exam") !== -1 || t.indexOf("test") !== -1 || t.indexOf("assignment") !== -1) {
+  if (
+    t.includes("exam") ||
+    t.includes("test") ||
+    t.includes("assignment") ||
+    t.includes("study")
+  ) {
     return "When exams or assignments feel overwhelming, break them into tiny tasks: list topics, set 25-minute focused blocks with short breaks, and start with the easiest piece. Combine this with good sleep instead of all-nighters.";
   }
 
-  if (t.indexOf("friend") !== -1 || t.indexOf("family") !== -1 || t.indexOf("relationship") !== -1) {
+  if (
+    t.includes("friend") ||
+    t.includes("family") ||
+    t.includes("relationship")
+  ) {
     return "Relationship stress can drain your energy a lot. Choose one safe person to talk to honestly, write down what you feel before you talk, and give yourself permission to set boundaries when you need space.";
   }
 
-  if (t.indexOf("anxious") !== -1 || t.indexOf("anxiety") !== -1 || t.indexOf("panic") !== -1) {
+  if (t.includes("anxious") || t.includes("anxiety") || t.includes("panic")) {
     return "During anxiety, focus on your body first: slow breathing (4–4–4), grounding with 5 things you see, 4 you can touch, 3 you can hear. After it settles, identify one small action that reduces the trigger.";
   }
 
-  if (t.indexOf("motivation") !== -1 || t.indexOf("malas") !== -1 || t.indexOf("no energy") !== -1) {
+  if (
+    t.includes("motivation") ||
+    t.includes("malas") ||
+    t.includes("no energy")
+  ) {
     return "Low motivation often means your brain is tired, not lazy. Start with a very small step (5–10 minutes of work), reward yourself, and connect the task to a personal goal or value that matters to you.";
   }
 
@@ -718,21 +808,70 @@ function getCoachReply(text) {
 }
 
 if (coachButton && coachInput && coachReply) {
-  coachButton.addEventListener("click", function () {
-    var txt = coachInput.value;
-    var reply = getCoachReply(txt);
-    coachReply.textContent = reply;
+  coachButton.addEventListener("click", () => {
+    const q = coachInput.value.trim();
+    coachReply.textContent = getCoachReply(q);
   });
 }
 
-// ---------- INITIALISE ----------
-applyThemeFromStorage();
-fillProfileForm();
+// ---------- Scan form handlers ----------
+
+if (scanForm) {
+  scanForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const form = scanForm.elements;
+
+    const values = {
+      sleep: form.sleep.value,
+      energy: form.energy.value,
+      motivation: form.motivation.value,
+      stress: form.stress.value,
+      screen: form.screen.value,
+      mood: form.mood.value
+    };
+
+    if (
+      !values.sleep ||
+      !values.energy ||
+      !values.motivation ||
+      !values.stress ||
+      !values.screen ||
+      !values.mood
+    ) {
+      alert("Please answer all questions first.");
+      return;
+    }
+
+    const res = computeResult(values);
+    showResult(res);
+
+    const history = loadHistory();
+    history.push({
+      date: todayISO(),
+      score: res.score.toFixed(1),
+      label: res.label
+    });
+    saveHistory(history);
+    renderHistory();
+  });
+}
+
+if (clearBtn && scanForm) {
+  clearBtn.addEventListener("click", () => {
+    scanForm.reset();
+  });
+}
+
+if (clearHistoryBtn) {
+  clearHistoryBtn.addEventListener("click", () => {
+    if (!confirm("Clear all previous scans on this device?")) return;
+    saveHistory([]);
+    renderHistory();
+  });
+}
+
+// ---------- Initial load ----------
+
 renderHistory();
-renderExtraTips();
-updateHabitUI();
-generateInsights();
-
-
 
   
