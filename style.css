@@ -726,3 +726,80 @@ body.theme-light .modal-content {
 .hint.small {
   font-size: 11px;
 }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: radial-gradient(circle at top, #0f172a 0%, #020617 45%, #000000 100%);
+  color: #e5e7eb;
+  min-height: 100vh;
+}
+
+/* Card glow & subtle gradient */
+.card {
+  background: radial-gradient(circle at top left, #0b1120, #020617);
+  border-radius: 18px;
+  padding: 18px 18px 20px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.9);
+}
+
+/* Headings with subtle gradient text */
+.header h1 {
+  background: linear-gradient(to right, #a5b4fc, #38bdf8, #4ade80);
+  -webkit-background-clip: text;
+  color: transparent;
+  font-size: 30px;
+  font-weight: 800;
+}
+
+h2 {
+  font-size: 19px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+h2::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #38bdf8;
+}
+.btn {
+  border-radius: 999px;
+  border: 1px solid #38bdf8;
+  background: radial-gradient(circle at top, #0ea5e9, #0369a1);
+  color: #e0f2fe;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 10px 25px rgba(8, 47, 73, 0.8);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.1s ease;
+}
+
+.btn.primary {
+  background: radial-gradient(circle at top, #22c55e, #15803d);
+  border-color: #22c55e;
+  color: #ecfdf5;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 13px 30px rgba(15, 23, 42, 0.9);
+  opacity: 0.97;
+}
+.fab {
+  background: radial-gradient(circle at top, #38bdf8, #0369a1);
+  color: #ecfeff;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+}
+
+.coach-panel,
+.breathing-panel,
+.tips-panel {
+  background: radial-gradient(circle at top left, #020617, #020617);
+  border-color: rgba(148, 163, 184, 0.5);
+}
+
+
