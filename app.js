@@ -1,7 +1,7 @@
 // =====================
 // CONFIG
 // =====================
-const HISTORY_KEY = "mindscan_history_v2";
+const HISTORY_KEY = "mindscan_history_v3";
 const PROFILE_KEY = "mindscan_profile_v1";
 
 // Your deployed Cloudflare Worker (Gemini) URL
@@ -41,42 +41,16 @@ function saveHistory(history) {
 }
 
 // =====================
-// PROFILE HANDLING
+// ELEMENTS
 // =====================
+const profileSection = document.getElementById("profileSection");
+const scanSection = document.getElementById("scanSection");
+const historyCard = document.getElementById("historyCard");
+
 const profileForm = document.getElementById("profileForm");
 const saveProfileBtn = document.getElementById("saveProfileBtn");
 const profileStatus = document.getElementById("profileStatus");
 
-const existingProfile = loadProfile();
-if (existingProfile && Object.keys(existingProfile).length) {
-  Array.from(profileForm.elements).forEach((el) => {
-    if (!el.name) return;
-    if (existingProfile[el.name] != null) {
-      el.value = existingProfile[el.name];
-    }
-  });
-  profileStatus.textContent = "Profile loaded from this device.";
-}
-
-saveProfileBtn?.addEventListener("click", () => {
-  const formData = new FormData(profileForm);
-  const profile = {};
-  for (const [key, val] of formData.entries()) {
-    profile[key] = val.toString();
-  }
-  if (!profile.name || !profile.age || !profile.gender) {
-    profileStatus.textContent = "Please fill in name, age and gender.";
-    profileStatus.style.color = "#fecaca";
-    return;
-  }
-  saveProfile(profile);
-  profileStatus.textContent = "Profile saved. You can run MindScan now.";
-  profileStatus.style.color = "#4ade80";
-});
-
-// =====================
-// MAIN SCAN / ALGORITHM
-// =====================
 const scanForm = document.getElementById("scanForm");
 const clearBtn = document.getElementById("clearBtn");
 
@@ -92,32 +66,119 @@ const resultMessage = document.getElementById("resultMessage");
 const mindMap = document.getElementById("mindMap");
 const actionPlanList = document.getElementById("actionPlanList");
 
-const extraTipsBtn = document.getElementById("extraTipsBtn");
-const extraTipsList = document.getElementById("extraTipsList");
+const toggleHistoryBtn = document.getElementById("toggleHistoryBtn");
+const historyContent = document.getElementById("historyContent");
+const historyList = document.getElementById("historyList");
+const clearHistoryBtn = document.getElementById("clearHistory");
+const weeklyChartCanvas = document.getElementById("weeklyChart");
+
+// widgets
+const breathingFab = document.getElementById("breathingFab");
+const breathingPanel = document.getElementById("breathingPanel");
+const closeBreathing = document.getElementById("closeBreathing");
+const breathingToggle = document.getElementById("breathingToggle");
+const breathingCircle = document.getElementById("breathingCircle");
+const breathingInstruction = document.getElementById("breathingInstruction");
+const breathingCounter = document.getElementById("breathingCounter");
+
+const coachFab = document.getElementById("coachFab");
+const coachPanel = document.getElementById("coachPanel");
+const closeCoach = document.getElementById("closeCoach");
+const coachMessages = document.getElementById("coachMessages");
+const coachForm = document.getElementById("coachForm");
+const coachInput = document.getElementById("coachInput");
+
+const tipsFab = document.getElementById("tipsFab");
+const tipsPanel = document.getElementById("tipsPanel");
+const closeTips = document.getElementById("closeTips");
+const tipsList = document.getElementById("tipsList");
+const tipsNewBtn = document.getElementById("tipsNewBtn");
 
 let history = loadHistory();
+let weeklyChartInstance = null;
+let coachHistory = [];
 
-// DASS-inspired scoring + lifestyle
+// =====================
+// LOGIN FLOW (PROFILE FIRST)
+// =====================
+function showLoginOnly() {
+  if (profileSection) profileSection.style.display = "";
+  if (scanSection) scanSection.style.display = "none";
+  if (resultCard) resultCard.style.display = "none";
+  if (historyCard) historyCard.style.display = "none";
+  if (breathingFab) breathingFab.style.display = "none";
+  if (coachFab) coachFab.style.display = "none";
+  if (tipsFab) tipsFab.style.display = "none";
+}
+
+function showMainScan() {
+  if (profileSection) profileSection.style.display = "none";
+  if (scanSection) scanSection.style.display = "";
+  if (historyCard) historyCard.style.display = "";
+  if (breathingFab) breathingFab.style.display = "";
+  if (coachFab) coachFab.style.display = "";
+  if (tipsFab) tipsFab.style.display = "";
+  // resultCard stays hidden until first scan
+}
+
+// on load, decide which view
+const existingProfile = loadProfile();
+if (existingProfile && Object.keys(existingProfile).length) {
+  // prefill fields (if user wants to see)
+  Array.from(profileForm.elements).forEach((el) => {
+    if (!el.name) return;
+    if (existingProfile[el.name] != null) {
+      el.value = existingProfile[el.name];
+    }
+  });
+  showMainScan();
+} else {
+  showLoginOnly();
+}
+
+saveProfileBtn?.addEventListener("click", () => {
+  const formData = new FormData(profileForm);
+  const profile = {};
+  for (const [key, val] of formData.entries()) {
+    profile[key] = val.toString();
+  }
+  if (!profile.name || !profile.age || !profile.gender) {
+    profileStatus.textContent = "Please fill in name, age and gender.";
+    profileStatus.style.color = "#b91c1c";
+    return;
+  }
+  saveProfile(profile);
+  profileStatus.textContent = "Profile saved. Loading MindScan…";
+  profileStatus.style.color = "#15803d";
+
+  showMainScan();
+});
+
+// =====================
+// MAIN SCAN / ALGORITHM
+// =====================
+
+// DASS-inspired scoring + daily habits
 function computeMindScanResult(values) {
   const MD_raw = values.q1 + values.q2 + values.q3; // mood/depression
   const AN_raw = values.q4 + values.q5 + values.q6; // anxiety
   const ST_raw = values.q7 + values.q8 + values.q9; // stress/tension
 
-  const sleep_diff = 3 - values.sleep;
-  const screen_diff = values.screen - 2;
-  const move_diff = 1 - values.move;
-  const support_diff = 1 - values.support;
+  const sleep_diff = 3 - values.sleep;     // lower sleep worsens
+  const screen_diff = values.screen - 2;   // more screen time worsens
+  const move_diff = 1 - values.move;       // less movement worsens
+  const support_diff = 1 - values.support; // less support worsens
 
   let MD =
     MD_raw +
     0.7 * sleep_diff +
-    0.5 * screen_diff -
-    0.7 * move_diff -
+    0.4 * screen_diff -
+    0.8 * move_diff -
     0.8 * support_diff;
   let AN =
     AN_raw +
     0.5 * sleep_diff +
-    0.8 * screen_diff -
+    0.9 * screen_diff -
     0.6 * move_diff;
   let ST =
     ST_raw +
@@ -135,8 +196,7 @@ function computeMindScanResult(values) {
 
   let label;
   if (wellnessScore < 4) label = "Red – high stress risk";
-  else if (wellnessScore < 8)
-    label = "Yellow – mild to moderate stress";
+  else if (wellnessScore < 8) label = "Yellow – mild to moderate stress";
   else label = "Green – doing okay";
 
   return {
@@ -145,36 +205,34 @@ function computeMindScanResult(values) {
     MD,
     AN,
     ST,
-    MD_raw,
-    AN_raw,
-    ST_raw,
     symptomIndex,
   };
 }
 
 function buildInsights(current, historyArr) {
-  let profileType = "Balanced pattern";
   const { MD, AN, ST } = current;
+
+  // main profile type
+  let profileType = "Balanced pattern";
   const maxAxis = Math.max(MD, AN, ST);
   if (maxAxis === MD) profileType = "Low mood pattern";
   else if (maxAxis === AN) profileType = "Anxiety / worry pattern";
   else if (maxAxis === ST) profileType = "Overload / tension pattern";
 
+  // risk band
   let riskBand = "low";
   if (current.symptomIndex >= 8) riskBand = "high";
   else if (current.symptomIndex >= 4) riskBand = "medium";
 
-  // trend last 7 days
+  // trend last 7 days (symptom index)
   const last7 = historyArr.slice(-7);
   const scores = last7.map((h) => h.symptomIndex);
-  let trendText = "Not enough data for trend yet.";
+  let trendText = "Not enough data for a clear trend yet.";
   if (scores.length >= 4) {
     const mid = Math.floor(scores.length / 2);
-    const firstAvg =
-      scores.slice(0, mid).reduce((a, b) => a + b, 0) / mid;
+    const firstAvg = scores.slice(0, mid).reduce((a, b) => a + b, 0) / mid;
     const lastAvg =
-      scores.slice(mid).reduce((a, b) => a + b, 0) /
-      (scores.length - mid);
+      scores.slice(mid).reduce((a, b) => a + b, 0) / (scores.length - mid);
     const diff = lastAvg - firstAvg;
     if (diff > 1) {
       trendText =
@@ -188,56 +246,107 @@ function buildInsights(current, historyArr) {
     }
   }
 
-  // simple prediction
+  // simple next day prediction based on last 3 days
   let predictionText =
-    "After one scan it’s still too early to predict tomorrow.";
+    "After one scan it is still early to predict tomorrow.";
   if (historyArr.length >= 3) {
-    const last3 = historyArr.slice(-3).map((h) => h.symptomIndex);
-    const first = last3[0];
-    const last = last3[2];
-    const trend = last - first;
-    const predSymptom = clamp(last + 0.6 * trend, 0, 12);
-    const _predWell = clamp(12 - predSymptom, 0, 12);
+    const last3 = historyArr.slice(-3);
+    const last3Sym = last3.map((h) => h.symptomIndex);
+    const first = last3Sym[0];
+    const lastVal = last3Sym[2];
+    const trend = lastVal - first;
+    const predSymptom = clamp(lastVal + 0.6 * trend, 0, 12);
+    const predictedWellness = clamp(12 - predSymptom, 0, 12);
+
     if (trend > 0.8) {
       predictionText =
-        "If nothing changes, tomorrow may feel a bit heavier. Small actions today can help soften it.";
+        "If nothing changes, tomorrow may feel heavier. Adjusting sleep, screen time and support today can soften this.";
     } else if (trend < -0.8) {
       predictionText =
-        "If you keep your current habits, tomorrow is likely to feel slightly lighter than today.";
+        "If you keep your current habits, tomorrow is likely to feel a little lighter than today.";
     } else {
       predictionText =
-        "Your pattern is quite steady, tomorrow will likely feel similar to today unless something big changes.";
+        "Your pattern is quite steady. Tomorrow will probably feel similar unless something big changes.";
     }
+    predictionText += ` Estimated wellness tomorrow: about ${predictedWellness.toFixed(
+      1
+    )} out of 12.`;
   }
 
-  let plan = [];
+  // use last few days of habits to decide management focus
+  const recent = historyArr.slice(-5);
+  let avgSleep = 3,
+    avgScreen = 2,
+    avgMove = 1,
+    avgSupport = 1;
+  if (recent.length) {
+    avgSleep =
+      recent.reduce((a, h) => a + (h.sleep ?? 3), 0) / recent.length;
+    avgScreen =
+      recent.reduce((a, h) => a + (h.screen ?? 2), 0) / recent.length;
+    avgMove =
+      recent.reduce((a, h) => a + (h.move ?? 1), 0) / recent.length;
+    avgSupport =
+      recent.reduce((a, h) => a + (h.support ?? 1), 0) / recent.length;
+  }
+
+  const leverMessages = [];
+  if (avgSleep < 2.1) {
+    leverMessages.push(
+      "Sleep: aim to improve sleep quality by fixing bedtime, reducing bright screens and caffeine late at night."
+    );
+  }
+  if (avgScreen > 2.1) {
+    leverMessages.push(
+      "Screen time: reduce long non study scrolling, especially in the hour before sleep."
+    );
+  }
+  if (avgMove < 0.6) {
+    leverMessages.push(
+      "Movement: include at least 10–15 minutes of light exercise or stretching daily."
+    );
+  }
+  if (avgSupport < 0.8) {
+    leverMessages.push(
+      "Support: reach out to trusted friends, family or mentors more regularly."
+    );
+  }
+
+  // general action plan based on profile type
+  let basePlan = [];
   if (profileType === "Low mood pattern") {
-    plan = [
-      "Keep a small daily routine: choose 1–3 simple tasks you can finish.",
+    basePlan = [
+      "Keep a simple routine: choose 1–3 small tasks you can complete today.",
       "Add at least one pleasant or meaningful activity (hobby, prayer, nature, music).",
       "Limit long isolation; try to speak with at least one person you trust.",
-      "If this feeling continues for 2 weeks or gets worse, consider talking to a counsellor.",
+      "If this low mood continues for 2 weeks or gets worse, consider talking to a counsellor.",
     ];
   } else if (profileType === "Anxiety / worry pattern") {
-    plan = [
+    basePlan = [
       "Practise 4–4–4 breathing when your body feels tense.",
-      "Reduce very stimulating content late at night (caffeine, horror videos, intense games).",
+      "Reduce very stimulating content late at night (horror videos, intense games, too much caffeine).",
       "Write worries down and break them into small steps, focus only on the first step.",
       "If fear or panic stops daily activities, please seek professional support.",
     ];
   } else if (profileType === "Overload / tension pattern") {
-    plan = [
+    basePlan = [
       "Write down all your tasks, then highlight only the top 3 for today.",
       "Schedule short stretch or walk breaks every 60–90 minutes.",
-      "Set a cut-off time at night to close your laptop and let your brain cool down.",
+      "Set a cut off time at night to close your laptop and let your brain cool down.",
       "Ask for help to reprioritise work if deadlines feel impossible.",
     ];
   } else {
-    plan = [
-      "Keep the healthy habits that are already working for you.",
+    basePlan = [
+      "Keep the healthy habits that already work for you.",
       "Notice which days feel easier and copy the same sleep, screen and study pattern.",
       "Use MindScan on tougher weeks to catch early signs of overload.",
     ];
+  }
+
+  const fullPlan = [...basePlan];
+  if (leverMessages.length) {
+    fullPlan.push("Key focus for the next few days:");
+    leverMessages.forEach((m) => fullPlan.push(m));
   }
 
   return {
@@ -245,7 +354,7 @@ function buildInsights(current, historyArr) {
     riskBand,
     trendText,
     predictionText,
-    plan,
+    plan: fullPlan,
   };
 }
 
@@ -262,8 +371,8 @@ scanForm?.addEventListener("submit", (e) => {
   vals.support = Number(data.get("support"));
 
   const result = computeMindScanResult(vals);
-
   const today = new Date().toISOString().slice(0, 10);
+
   const entry = {
     date: today,
     wellness: result.wellnessScore,
@@ -272,6 +381,10 @@ scanForm?.addEventListener("submit", (e) => {
     AN: result.AN,
     ST: result.ST,
     symptomIndex: result.symptomIndex,
+    sleep: vals.sleep,
+    screen: vals.screen,
+    move: vals.move,
+    support: vals.support,
   };
   history.push(entry);
   saveHistory(history);
@@ -283,6 +396,7 @@ scanForm?.addEventListener("submit", (e) => {
 function renderResult(r, historyArr) {
   if (!resultCard) return;
   resultCard.hidden = false;
+  resultCard.style.display = "";
 
   let emoji = "🙂";
   if (r.wellnessScore < 4) emoji = "😟";
@@ -290,7 +404,7 @@ function renderResult(r, historyArr) {
   else emoji = "😊";
   wellnessAvatar.textContent = emoji;
   avatarText.textContent =
-    "Your latest check-in shows how your mood, anxiety and stress look today.";
+    "Your latest check in shows how your mood, anxiety and stress look today.";
 
   scoreBarInner.style.width = `${(r.wellnessScore / 12) * 100}%`;
   scoreBarLabel.textContent = `Wellness level: ${r.wellnessScore.toFixed(
@@ -319,7 +433,7 @@ function renderResult(r, historyArr) {
 
   mindMap.innerHTML = `
     <div class="mindmap-section">
-      <div class="mindmap-title">Central node: Today’s profile</div>
+      <div class="mindmap-title">Central node: Today s profile</div>
       <ul class="mindmap-branch">
         <li>Profile: <strong>${insight.profileType}</strong></li>
         <li>Risk level: <strong>${insight.riskBand.toUpperCase()}</strong></li>
@@ -355,35 +469,8 @@ clearBtn?.addEventListener("click", () => {
 });
 
 // =====================
-// EXTRA WELLNESS TIPS
-// =====================
-const tipsPool = [
-  "Drink a full glass of water and stretch your shoulders and neck.",
-  "Choose one small task and complete it fully before opening social media.",
-  "Spend 5 minutes outside or near a window and notice what you can see and hear.",
-  "Write down three things that went okay today, even if they are small.",
-  "Reduce bright screen use 30 minutes before sleep and switch to a calm activity.",
-  "Send a short supportive message to a friend, even just to say hi.",
-];
-
-extraTipsBtn?.addEventListener("click", () => {
-  const tip = tipsPool[Math.floor(Math.random() * tipsPool.length)];
-  extraTipsList.innerHTML = "";
-  const li = document.createElement("li");
-  li.textContent = tip;
-  extraTipsList.appendChild(li);
-});
-
-// =====================
 // HISTORY & WEEKLY CHART
 // =====================
-const toggleHistoryBtn = document.getElementById("toggleHistoryBtn");
-const historyContent = document.getElementById("historyContent");
-const historyList = document.getElementById("historyList");
-const clearHistoryBtn = document.getElementById("clearHistory");
-const weeklyChartCanvas = document.getElementById("weeklyChart");
-let weeklyChartInstance = null;
-
 function renderHistory(arr) {
   if (!historyList || !weeklyChartCanvas) return;
 
@@ -418,28 +505,30 @@ function renderHistory(arr) {
   });
 
   if (weeklyChartInstance) weeklyChartInstance.destroy();
-  weeklyChartInstance = new Chart(weeklyChartCanvas.getContext("2d"), {
-    type: "line",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: "Wellness score",
-          data,
-          tension: 0.35,
-          borderWidth: 2,
-        },
-      ],
-    },
-    options: {
-      scales: {
-        y: {
-          suggestedMin: 0,
-          suggestedMax: 12,
+  if (labels.length) {
+    weeklyChartInstance = new Chart(weeklyChartCanvas.getContext("2d"), {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Wellness score",
+            data,
+            tension: 0.35,
+            borderWidth: 2,
+          },
+        ],
+      },
+      options: {
+        scales: {
+          y: {
+            suggestedMin: 0,
+            suggestedMax: 12,
+          },
         },
       },
-    },
-  });
+    });
+  }
 }
 
 toggleHistoryBtn?.addEventListener("click", () => {
@@ -460,16 +549,8 @@ if (history.length) {
 }
 
 // =====================
-// BREATHING 4–4–4
+// BREATHING 4 4 4
 // =====================
-const breathingFab = document.getElementById("breathingFab");
-const breathingPanel = document.getElementById("breathingPanel");
-const closeBreathing = document.getElementById("closeBreathing");
-const breathingToggle = document.getElementById("breathingToggle");
-const breathingCircle = document.getElementById("breathingCircle");
-const breathingInstruction = document.getElementById("breathingInstruction");
-const breathingCounter = document.getElementById("breathingCounter");
-
 let breathingTimer = null;
 let breathingPhaseTimer = null;
 
@@ -548,15 +629,6 @@ breathingToggle?.addEventListener("click", () => {
 // =====================
 // WELLNESS COACH (Gemini via Worker)
 // =====================
-const coachFab = document.getElementById("coachFab");
-const coachPanel = document.getElementById("coachPanel");
-const closeCoach = document.getElementById("closeCoach");
-const coachMessages = document.getElementById("coachMessages");
-const coachForm = document.getElementById("coachForm");
-const coachInput = document.getElementById("coachInput");
-
-let coachHistory = [];
-
 function pushMessage(role, text) {
   const div = document.createElement("div");
   div.className = "msg " + (role === "user" ? "msg-user" : "msg-bot");
@@ -609,4 +681,38 @@ coachForm?.addEventListener("submit", async (e) => {
       "Coach: Sorry, there was a problem contacting the wellness coach.";
   }
 });
+
+// =====================
+// TIPS WIDGET
+// =====================
+const tipsPool = [
+  "Drink a full glass of water and stretch your shoulders and neck.",
+  "Choose one small task and complete it fully before opening social media.",
+  "Spend 5 minutes outside or near a window and notice what you can see and hear.",
+  "Write down three things that went okay today, even if they are small.",
+  "Reduce bright screen use 30 minutes before sleep and switch to a calm activity.",
+  "Send a short supportive message to a friend, even just to say hi.",
+  "Prepare your bag or to do list for tomorrow so your mind can rest easier tonight.",
+];
+
+function showRandomTip() {
+  const tip = tipsPool[Math.floor(Math.random() * tipsPool.length)];
+  tipsList.innerHTML = "";
+  const li = document.createElement("li");
+  li.textContent = tip;
+  tipsList.appendChild(li);
+}
+
+tipsFab?.addEventListener("click", () => {
+  tipsPanel.hidden = !tipsPanel.hidden;
+  if (!tipsPanel.hidden) {
+    showRandomTip();
+  }
+});
+
+closeTips?.addEventListener("click", () => {
+  tipsPanel.hidden = true;
+});
+
+tipsNewBtn?.addEventListener("click", showRandomTip);
 
