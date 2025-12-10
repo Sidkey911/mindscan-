@@ -16,19 +16,20 @@
       <div>
         <h1>MindScan Lite</h1>
         <p class="subtitle">
-          A simple daily check-in to understand your mood, anxiety and stress.
-          This is for awareness only, not a medical diagnosis.
+          A gentle daily check in for mood, anxiety and stress. This tool is for awareness only, not a diagnosis.
         </p>
       </div>
-      <a href="summary.html" class="link header-link">View my summary &amp; weekly pattern →</a>
+      <a href="summary.html" class="link header-link">View my summary and weekly trend →</a>
     </div>
   </header>
 
   <main class="container">
-    <!-- LEFT COLUMN: profile + scan + result -->
+    <!-- LOGIN / PROFILE VIEW -->
     <section class="card main-card" id="profileSection">
-      <h2>Step 1 – Basic profile</h2>
-      <p class="hint">This helps personalise your chart and wellness coach. Saved only in this device.</p>
+      <h2>Step 1 – Quick profile</h2>
+      <p class="hint">
+        This helps personalise your MindScan and wellness coach. Data is stored only on this device.
+      </p>
 
       <form id="profileForm" class="profile-form">
         <label>
@@ -64,23 +65,24 @@
         </label>
 
         <div class="profile-actions">
-          <button type="button" class="btn primary" id="saveProfileBtn">Save profile</button>
+          <button type="button" class="btn primary" id="saveProfileBtn">Save and continue</button>
           <span id="profileStatus" class="hint"></span>
         </div>
       </form>
     </section>
 
+    <!-- MAIN SCAN VIEW (hidden until profile saved) -->
     <section class="card main-card" id="scanSection">
       <h2>Step 2 – Today’s MindScan</h2>
       <p class="hint">
-        For each item, choose how often it happened in the past few days.
+        Think about the past few days. For each item, choose how often it happened.
         Scale: 0 = Never, 1 = Sometimes, 2 = Often, 3 = Almost always.
       </p>
 
       <form id="scanForm" class="form-grid">
         <!-- Mood / low energy items (MD) -->
         <label>
-          1. I feel sad or low most of the time.
+          1. I feel down or low more days than usual.
           <select name="q1" required>
             <option value="">Select…</option>
             <option value="0">0 – Never</option>
@@ -91,7 +93,7 @@
         </label>
 
         <label>
-          2. I find it hard to enjoy things like before.
+          2. I find it hard to enjoy things that used to make me happy.
           <select name="q2" required>
             <option value="">Select…</option>
             <option value="0">0 – Never</option>
@@ -102,7 +104,7 @@
         </label>
 
         <label>
-          3. I feel tired or have low energy most days.
+          3. I feel tired or heavy even when I did not do much.
           <select name="q3" required>
             <option value="">Select…</option>
             <option value="0">0 – Never</option>
@@ -114,7 +116,7 @@
 
         <!-- Anxiety (AN) -->
         <label>
-          4. I feel worried or nervous a lot.
+          4. My mind keeps worrying about assignments, money or the future.
           <select name="q4" required>
             <option value="">Select…</option>
             <option value="0">0 – Never</option>
@@ -125,7 +127,7 @@
         </label>
 
         <label>
-          5. My heart races or I feel “panicky”.
+          5. My body feels tense (heart racing, tight chest, shaky).
           <select name="q5" required>
             <option value="">Select…</option>
             <option value="0">0 – Never</option>
@@ -136,7 +138,7 @@
         </label>
 
         <label>
-          6. I keep imagining worst case scenarios.
+          6. I imagine worst case scenarios and find it hard to switch off.
           <select name="q6" required>
             <option value="">Select…</option>
             <option value="0">0 – Never</option>
@@ -148,7 +150,7 @@
 
         <!-- Stress / overload (ST) -->
         <label>
-          7. I feel under a lot of pressure.
+          7. I feel overloaded with tasks or responsibilities.
           <select name="q7" required>
             <option value="">Select…</option>
             <option value="0">0 – Never</option>
@@ -159,7 +161,7 @@
         </label>
 
         <label>
-          8. I get easily irritated or tense.
+          8. I get easily irritated or angry with small things.
           <select name="q8" required>
             <option value="">Select…</option>
             <option value="0">0 – Never</option>
@@ -170,7 +172,7 @@
         </label>
 
         <label>
-          9. It feels difficult to relax my mind.
+          9. My mind finds it hard to relax, even when I try to rest.
           <select name="q9" required>
             <option value="">Select…</option>
             <option value="0">0 – Never</option>
@@ -180,7 +182,7 @@
           </select>
         </label>
 
-        <!-- Lifestyle factors -->
+        <!-- Daily habits (for algorithm) -->
         <label>
           Sleep last night
           <span class="hint">(1 very poor, 3 good)</span>
@@ -194,7 +196,7 @@
 
         <label>
           Non-study screen time today
-          <span class="hint">(1 &lt;3h, 2 = 3–6h, 3 &gt; 6h)</span>
+          <span class="hint">(1 &lt; 3 hours, 2 = 3–6 hours, 3 &gt; 6 hours)</span>
           <select name="screen" required>
             <option value="">Select…</option>
             <option value="1">1 – Less than 3 hours</option>
@@ -205,7 +207,7 @@
 
         <label>
           Movement / exercise today
-          <span class="hint">(0 no, 1 yes)</span>
+          <span class="hint">(0 none, 1 yes)</span>
           <select name="move" required>
             <option value="">Select…</option>
             <option value="0">0 – No</option>
@@ -234,7 +236,7 @@
       <div class="avatar-row">
         <div class="wellness-avatar" id="wellnessAvatar" aria-label="Wellness avatar">🙂</div>
         <p class="avatar-text" id="avatarText">
-          Your mind status will appear here after you run MindScan.
+          Your MindScan result will appear here after you complete the questions.
         </p>
       </div>
 
@@ -257,22 +259,17 @@
       <h3>Personal action plan</h3>
       <ul id="actionPlanList" class="suggestions"></ul>
 
-      <h3>Extra wellness tips</h3>
-      <p class="hint">Tap the button to receive one small action you can try today.</p>
-      <button type="button" class="btn" id="extraTipsBtn">Get a tip</button>
-      <ul id="extraTipsList" class="suggestions"></ul>
-
       <p class="disclaimer">
-        MindScan Lite cannot replace professional support. If you feel overwhelmed, unsafe, or your symptoms last
-        for many days, please talk to someone you trust or a counsellor.
+        MindScan Lite does not replace mental health professionals. If you feel unsafe or your symptoms last many days,
+        please reach out to someone you trust or a counsellor.
       </p>
     </section>
 
     <!-- RIGHT COLUMN: history / chart -->
-    <section class="card side-card">
-      <h2>Previous scans &amp; weekly chart</h2>
+    <section class="card side-card" id="historyCard">
+      <h2>Previous scans and weekly chart</h2>
       <button type="button" class="btn btn-secondary" id="toggleHistoryBtn">Show history</button>
-      <p class="hint">Data is stored only in this browser. Clearing browser data will remove it.</p>
+      <p class="hint">Your data is stored only in this browser. Clearing browser data will remove it.</p>
 
       <div id="historyContent" hidden>
         <div class="chart-wrapper">
@@ -298,7 +295,7 @@
       <button class="icon-btn" id="closeBreathing">✕</button>
     </div>
     <p class="hint">
-      Follow the circle for one minute: inhale 4s, hold 4s, exhale 4s. This helps calm the body.
+      Follow the circle for one minute: inhale 4 seconds, hold 4 seconds, exhale 4 seconds. The numbers help you stay in rhythm.
     </p>
     <div class="breathing-wrapper">
       <div class="breathing-circle" id="breathingCircle"></div>
@@ -334,6 +331,21 @@
     </form>
   </div>
 
+  <!-- Floating tips button -->
+  <button class="fab tips-fab" id="tipsFab" aria-label="Wellness tips">💡</button>
+
+  <div class="side-panel tips-panel" id="tipsPanel" hidden>
+    <div class="side-panel-header">
+      <h3>Small wellness tips</h3>
+      <button class="icon-btn" id="closeTips">✕</button>
+    </div>
+    <p class="hint">
+      One small step you can try today. Tap “New tip” to refresh.
+    </p>
+    <ul id="tipsList" class="suggestions"></ul>
+    <button type="button" class="btn primary" id="tipsNewBtn">New tip</button>
+  </div>
+
   <footer class="footer">
     <small>MindScan Lite – Student Wellness Innovation (demo only)</small>
   </footer>
@@ -342,3 +354,4 @@
   <script src="app.js"></script>
 </body>
 </html>
+
